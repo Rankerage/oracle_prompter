@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.oracleprompter.oracle_prompter"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

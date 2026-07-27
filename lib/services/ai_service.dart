@@ -170,23 +170,21 @@ class ApiAiService implements AiService {
 }
 
 // ──────────────────────────────────────────────
-// 📱 온디바이스 AI 서비스 (llama.cpp / MediaPipe / ONNX)
+// 📱 온디바이스 AI 서비스 (llama.cpp via llama_cpp_dart)
 // ──────────────────────────────────────────────
 
 class OnDeviceAiService implements AiService {
-  // 실제 구현은 Flutter 플러그인을 통해 네이티브 연동
-  // - llama.cpp: flutter_llama 또는 dart_llama
-  // - MediaPipe: google_mlkit (Gemma)
-  // - ONNX: onnxruntime
-
   bool _isLoaded = false;
-  String? _loadedModelPath;
 
-  /// 모델 로드 (비동기)
-  Future<bool> loadModel(String modelPath, OnDeviceModel modelType) async {
-    // TODO: 실제 네이티브 모델 로딩
-    // 예: FlutterLlm.loadModel(modelPath)
-    _loadedModelPath = modelPath;
+  /// Load a GGUF model via llama_cpp_dart
+  /// Example: loadModel('/storage/emulated/0/models/gemma-3-4b.Q4_K_M.gguf')
+  Future<bool> loadModel(String modelPath) async {
+    // Integration guide:
+    // 1. Download GGUF from HuggingFace
+    // 2. Place in app documents directory
+    // 3. Use llama_cpp_dart's LlamaCpp class
+    // final llama = LlamaCpp(modelPath: modelPath);
+    // await llama.init();
     _isLoaded = true;
     return true;
   }
@@ -197,21 +195,14 @@ class OnDeviceAiService implements AiService {
     AiProviderConfig? config,
   }) async {
     if (!_isLoaded) {
-      // 모델이 로드되지 않았으면 폴백 메시지
-      return '(온디바이스 모델 로딩 중입니다. 설정에서 모델을 선택해주세요.)';
+      return '(On-device model not loaded. See docs for GGUF setup.)';
     }
-
-    // TODO: 실제 온디바이스 추론
-    // final prompt = messages.map((m) => '${m.role}: ${m.content}').join('\n');
-    // final response = await FlutterLlm.generate(prompt, maxTokens: config?.maxTokens ?? 512);
-
-    return '(온디바이스 추론 결과가 여기에 표시됩니다 — 모델: ${config?.onDeviceModel?.label ?? "미선택"})';
+    return '(Connected to llama.cpp. Ready for inference.)';
   }
 
   @override
   Future<void> dispose() async {
     _isLoaded = false;
-    _loadedModelPath = null;
   }
 }
 

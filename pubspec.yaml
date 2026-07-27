@@ -16,7 +16,10 @@ dependencies:
 
   # ─── 오픈소스 음성 서브시스템 ───
   flutter_tts: ^4.2.2          # TTS (시스템 엔진 or Piper/SherpaTTS)
-  speech_to_text: ^7.0.0       # STT (시스템 엔진 or sherpa-onnx)
+  speech_to_text: ^7.0.0       # STT fallback (Google STT)
+  sherpa_onnx: ^1.13.4         # On-device STT (SenseVoice/Moonshine, Korean OK)
+  # ─── 오픈소스 온디바이스 LLM ───
+  llama_cpp_dart: 0.2.2       # llama.cpp Dart binding → GGUF models
 
   # ─── 오픈소스 오디오 ───
   just_audio: ^0.9.42          # 오디오 재생 (Oboe/AAudio 백엔드 사용)
