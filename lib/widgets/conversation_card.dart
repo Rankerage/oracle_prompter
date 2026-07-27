@@ -137,9 +137,9 @@ class _ConversationCardState extends State<ConversationCard>
           style: TextStyle(color: Colors.grey.shade700, fontSize: 10)),
         const SizedBox(height: 18),
         Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          _btn(widget.negativeLabel, false, Colors.grey.shade600),
-          const SizedBox(width: 20),
-          _btn(widget.positiveLabel, true, color),
+          _choiceBtn(widget.negativeLabel, false, Colors.grey.shade600),
+          const SizedBox(width: 24),
+          _choiceBtn(widget.positiveLabel, true, color),
         ]),
       ]),
     );
@@ -153,18 +153,16 @@ class _ConversationCardState extends State<ConversationCard>
         border: Border.all(color: Colors.white.withAlpha(20)),
       ),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
-        // Answer text
         Text(widget.backAnswer, textAlign: TextAlign.center,
           style: const TextStyle(color: Colors.white70, fontSize: 14, height: 1.5)),
         const SizedBox(height: 6),
         Text(_secondPrompt(),
           style: TextStyle(color: Colors.grey.shade500, fontSize: 11)),
         const SizedBox(height: 16),
-        // Same buttons still present
         Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          _btn(widget.negativeLabel, false, Colors.grey.shade600),
-          const SizedBox(width: 20),
-          _btn(widget.positiveLabel, true, color),
+          _choiceBtn(widget.negativeLabel, false, Colors.grey.shade600),
+          const SizedBox(width: 24),
+          _choiceBtn(widget.positiveLabel, true, color),
         ]),
       ]),
     );
@@ -175,17 +173,22 @@ class _ConversationCardState extends State<ConversationCard>
     return '다시 한 번 확인해주세요.';
   }
 
-  Widget _btn(String label, bool value, Color color) {
+  Widget _choiceBtn(String label, bool value, Color color) {
+    // Universal symbols: ✕ = No, ○ = Yes (East Asia) / ✓ = Yes (Global)
+    final symbol = value ? '○' : '✕';
     return GestureDetector(
       onTap: () => _tap(value),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+        width: 72, height: 72,
         decoration: BoxDecoration(
-          color: color.withAlpha(20), borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: color.withAlpha(80)),
+          shape: BoxShape.circle,
+          color: color.withAlpha(20),
+          border: Border.all(color: color.withAlpha(100), width: 2),
         ),
-        child: Text(label, style: TextStyle(
-            color: color, fontWeight: FontWeight.bold, fontSize: 16)),
+        child: Center(
+          child: Text(symbol, style: TextStyle(
+            color: color, fontSize: 28, fontWeight: FontWeight.w300)),
+        ),
       ),
     );
   }
