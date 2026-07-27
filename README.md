@@ -31,16 +31,23 @@
 
 ---
 
-## 🎯 Why OraclePrompter
+## 🎯 Why OraclePrompter Exists
 
-| Other AI Assistants | OraclePrompter |
-|---------------------|---------------|
-| Waits for you to speak | Always listening. Whispers before you ask |
-| Talks out loud on speaker | **Earpiece whisper** — only you can hear |
-| Text chat only | Sees what you see (camera), hears what you hear (mic) |
-| Resets every session | All conversations saved as mind graph + markdown, forever |
-| Locked to one AI model | **On-device / OpenAI / Claude / DeepSeek / Gemini / Custom** — you choose |
-| Requires screen interaction | **Voice-First.** Say "O.P" and everything works hands-free |
+> **99% of AI tokens are consumed by 1% of people.**  
+> Developers build for developers. Everyone else is left behind.
+
+O.P flips this. **Zero learning curve.** No commands. No syntax. No terminal.
+
+Just cards. Tap "Yes" or "No". That's it.
+
+| Traditional AI | OraclePrompter |
+|---------------|---------------|
+| You must learn its language | It learns your preferences |
+| Type commands, remember syntax | Tap cards, speak naturally |
+| Built for developers | **Built for everyone** |
+| Stares at you from a screen | Whispers in your ear |
+
+> **"The learning curve is flat. Because it's not a tool — it's a companion."**
 
 ---
 
