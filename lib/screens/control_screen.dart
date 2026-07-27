@@ -53,7 +53,7 @@ class _ControlScreenState extends State<ControlScreen> {
           const SizedBox(height: 20),
 
           // --- 녹음/녹화 ---
-          _sectionHeader('⏺️ 녹음·녹화', '모든 소리 기록'),
+          _sectionHeader('⏺️ 녹음·녹화', '마이크 항상 켜짐 (기본)'),
           _buildRecordingControls(oracle),
 
           const SizedBox(height: 20),
