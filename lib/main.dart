@@ -10,6 +10,7 @@ import '../services/stt_service.dart';
 import '../services/audio_effect_service.dart';
 import 'screens/home_screen.dart';
 import 'screens/onboarding_screen.dart';
+import 'services/card_first_launcher.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
