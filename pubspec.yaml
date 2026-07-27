@@ -1,0 +1,51 @@
+name: oracle_prompter
+description: "OraclePrompter (O.P) - 귓속의 AI. 당신의 모든 대화를 지배하는 스텔스 오디오 에이전트."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  # 상태 관리
+  provider: ^6.1.2
+
+  # ─── 오픈소스 음성 서브시스템 ───
+  flutter_tts: ^4.2.2          # TTS (시스템 엔진 or Piper/SherpaTTS)
+  speech_to_text: ^7.0.0       # STT (시스템 엔진 or sherpa-onnx)
+
+  # ─── 오픈소스 오디오 ───
+  just_audio: ^0.9.42          # 오디오 재생 (Oboe/AAudio 백엔드 사용)
+
+  # ─── 카메라 (👁️ 시선 모드) ───
+  camera: ^0.11.1              # 실시간 카메라 프리뷰 + 프레임 캡처
+
+  # ─── 오픈소스 그래프 레이아웃 ───
+  # d3-force-flutter (force-directed graph 알고리즘)
+  # flutter_force_directed_graph (바로 사용 가능한 위젯)
+
+  # ─── 네트워크 / 저장소 ───
+  http: ^1.2.2                 # API 통신 (OpenAI/Anthropic/DeepSeek)
+  shared_preferences: ^2.3.4  # KV 저장소 (SQLite 레벨의 경량 설정)
+  path_provider: ^2.1.5       # 파일 시스템 경로 (모델 파일 저장)
+
+  # ─── 시스템 ───
+  permission_handler: ^11.3.1  # 런타임 권한
+  flutter_foreground_task: ^8.17.0  # 백그라운드 서비스
+  wakelock_plus: ^1.2.10       # 화면 항상 켜기
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/audio/
+    - assets/images/
+    - assets/skills/

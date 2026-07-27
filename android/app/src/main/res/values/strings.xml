@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">OraclePrompter</string>
+    <string name="accessibility_service_description">
+        OraclePrompter는 핸즈프리 음성 제어 기능을 제공하기 위해 볼륨 버튼 입력을 감지합니다.
+        이 서비스는 화면 내용을 읽거나 수집하지 않으며, 오직 물리 버튼 이벤트만 처리합니다.
+        개인정보는 수집되지 않으며, 모든 데이터는 기기 내에서만 처리됩니다.
+    </string>
+</resources>
