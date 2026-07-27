@@ -1,330 +1,147 @@
-# 🏛️ OraclePrompter — 존재론적 아키텍처
+# 🏛️ Architecture
 
-> "나보다 나를 더 잘 아는 AI" — 구현 설계서
+> "The AI that knows you better than you know yourself."
 
----
+## 1. Zero-Friction Onboarding
 
-## 1. 첫 사용의 간편함 (Zero-Friction Onboarding)
-
-### 원칙: 버튼 1개 → 즉시 작동
+Button 1 → Instant activation. No setup required.
 
 ```
-앱 최초 실행
+First Launch
   │
-  ├─ [O.P 시작하기] 버튼 1개
+  ├─ [Start O.P] — one button
   │
-  ▼
-  ├─ 마이크 권한 요청 (OS 다이얼로그)
-  ├─ 알림 권한 요청
+  ├─ Mic permission (OS dialog)
+  ├─ Notification permission
   │
-  ▼
-  └─ 🎉 "Hi friend!! I am your OraclePrompter."
-      → 바로 대기 모드 진입
-      → 5탭 모두 사용 가능
-      → AI는 온디바이스 기본값 (API 키 없어도 동작)
+  └─ "Hi friend!! I am your OraclePrompter."
+      → Standby mode immediately
+      → All 5 tabs accessible
+      → On-device AI as default (no API key needed)
 ```
 
-### 설정은 "필요할 때만"
-
-| 사용자 행동 | 시점 | 응답 |
-|------------|------|------|
-| Oracle 탭에서 질문 | 첫 메시지 전송 시 | "API 키를 입력하면 더 똑똑해집니다" 배너 |
-| 시선 탭 활성화 | 토글 ON 시 | 카메라 권한 요청 (OS) |
-| 통화 기능 사용 | 제어 탭 접근 시 | "실험실 기능입니다" 안내 |
-| 위치로그 | 기록 탭 열람 시 | 위치 권한 요청 (OS) |
-
-### 기술 구현
-- `SharedPreferences`에 `isFirstLaunch` 플래그
-- `OnboardingScreen` → 1회만 표시
-- 모든 AI 기능은 온디바이스 폴백 기본값
-
----
-
-## 2. UI/UX 합리성 — 5탭 검증
-
-### 현재 구조의 논리적 정당성
+## 2. 5-Tab UX
 
 ```
-인간의 인지 흐름              →    O.P 탭 구조
+Human cognition flow        →    O.P Tab Structure
 ─────────────────────────────────────────────
-1. 지금 무슨 일이?            →    🧠 마인드 (실시간 인식)
-2. AI에게 물어보자             →    💬 Oracle (대화)
-3. AI가 내 눈을 통해 본다       →    👁️ 시선 (Vision)
-4. 지난 일을 돌아보자           →    📖 기록 (회고)
-5. 설정을 바꾸자               →    🎛️ 제어 (환경)
+1. What's happening now?    →    🧠 Mind (real-time recognition)
+2. Ask the AI               →    💬 Oracle (conversation)
+3. AI sees through my eyes   →    👁️ Sight (Vision)
+4. Review the past           →    📖 Journal (retrospect)
+5. Adjust settings           →    🎛️ Control (environment)
 ```
 
-### 탭 전환 최적화
-- `IndexedStack` 사용 → 탭 전환 시 상태 유지 (re-build 방지)
-- 각 탭은 독립적인 `StatefulWidget`
-- 백그라운드 탭도 Dispose되지 않음 (메모리 vs UX 트레이드오프)
+- `IndexedStack` preserves tab state
+- Each tab is independent `StatefulWidget`
+- Minimum touch target 48x48dp
+- High-contrast dark theme (WCAG AA)
 
-### 접근성
-- 모든 버튼에 `semanticsLabel` 추가
-- 최소 터치 영역 48x48dp
-- 고대비 다크 테마 (WCAG AA)
+## 3. Power Management
 
----
+| Mode | Behavior | Battery | Trigger |
+|------|----------|:---:|------|
+| 🌙 **Saving** | STT only (5s buffer), graph 30s | 12h+ | Screen OFF + silence 5min |
+| ⚡ **Normal** | STT real-time, graph 5s, Vision 15s | 6-8h | Screen ON or in call |
+| 🚀 **Performance** | Full features, API real-time | 2-4h | Charging |
 
-## 3. 전원 관리 — 24시간 구동 전략
+Options:
+- Mic when screen OFF (toggle)
+- Wi-Fi only API (toggle)
+- Vision interval: 4–60s
+- Graph interval: 2–30s
+- Prefer on-device (toggle)
 
-### 문제: 상시 마이크 + 주기적 카메라 + API 호출 = 배터리 2~4시간
+## 4. Phone-Centric Agent
 
-### 해결: 3단계 전원 모드
-
-| 모드 | 동작 | 배터리 | 전환 조건 |
-|------|------|:---:|------|
-| 🌙 **절전** | STT만 (5초 버퍼), 그래프 업데이트 30초 주기 | 12h+ | 화면 OFF + 무음 5분 |
-| ⚡ **일반** | STT 실시간, 그래프 5초, Vision 15초 | 6-8h | 화면 ON 또는 통화 중 |
-| 🚀 **성능** | 전체 기능 최대 주기, API 실시간 | 2-4h | 충전 중 |
-
-### 기술 구현
-```dart
-// 전원 모드 자동 전환
-class PowerManager {
-  void evaluate() {
-    if (!screenOn && silenceDuration > 5.minutes) → 절전
-    if (screenOn || inCall) → 일반
-    if (charging) → 성능
-  }
-}
-```
-
-### 배터리 최적화 옵션 (설정 > 전원)
-
-| 옵션 | 기본값 | 설명 |
-|------|:---:|------|
-| 화면 OFF 시 마이크 | ON | OFF 시 절전 모드에서도 STT 중단 |
-| Wi-Fi only API | OFF | ON 시 셀룰러 데이터 사용 안 함 |
-| Vision 분석 주기 | 15초 | 4~60초 |
-| 그래프 업데이트 주기 | 5초 | 2~30초 |
-| 온디바이스 우선 | ON | API 호출 최소화 |
-
----
-
-## 4. 스마트폰 중심 에이전트 아키텍처
-
-### O.P는 "앱"이 아니라 "에이전트 OS"
+O.P is an "Agent OS" — not just an app.
 
 ```
 ┌──────────────────────────────────────────┐
 │              OraclePrompter               │
-│                                           │
 │  ┌────────────────────────────────────┐  │
-│  │         통합 마크다운 DB            │  │
-│  │  (모든 앱 데이터의 단일 진실 공급원)  │  │
+│  │      Unified Markdown DB            │  │
+│  │   (Single source of truth)          │  │
 │  └────────────┬───────────────────────┘  │
 │               │                           │
 │  ┌────────────┼───────────────────────┐  │
-│  │   데이터 수집 레이어 (Plugins)      │  │
-│  │                                    │  │
-│  │  📞 통화록  📱 알림  📍 위치       │  │
-│  │  📷 카메라  🎤 마이크  📅 캘린더   │  │
-│  │  💬 메시지  🌐 브라우저  📊 건강    │  │
+│  │   Data Collection Layer            │  │
+│  │  📞 Calls  📱 Notifications  📍 GPS│  │
+│  │  📷 Camera 🎤 Mic  📅 Calendar     │  │
+│  │  💬 SMS   🌐 Browser  📊 Health    │  │
 │  └────────────┬───────────────────────┘  │
 │               │                           │
 │  ┌────────────┼───────────────────────┐  │
-│  │   처리 레이어                      │  │
+│  │   Processing Layer                 │  │
 │  │  STT → LLM → MindGraph → Markdown  │  │
 │  └────────────────────────────────────┘  │
 └──────────────────────────────────────────┘
 ```
 
-### 수집 대상 앱 데이터
-
-| 데이터 소스 | Android API | 우선순위 |
-|------------|-------------|:---:|
-| 통화 기록 | `CallLog.Calls` | 🟢 1차 |
-| 문자 메시지 | `Telephony.Sms` | 🟢 1차 |
-| 캘린더 | `CalendarContract` | 🟢 1차 |
-| 연락처 | `ContactsContract` | 🟡 2차 |
-| 알림 | `NotificationListenerService` | 🟡 2차 |
-| 건강 (걸음 수 등) | `Health Connect` | 🟡 2차 |
-| 앱 사용 시간 | `UsageStatsManager` | 🔴 3차 |
-| 브라우저 히스토리 | Chrome Custom Tabs | 🔴 3차 |
-| 음악 감상 기록 | `MediaStore` | 🔴 3차 |
-
----
-
-## 5. 영구 보존 — 마크다운 기반 개인 지식 베이스
-
-### 원칙: 모든 것은 마크다운으로
+## 5. Permanent Knowledge Base
 
 ```
-/data/data/com.oracleprompter/files/vault/
-│
-├── index.md                       # 전체 인덱스
-├── sessions/                      # 원본 세션 기록
-│   ├── 2026-07-25_오후_팀미팅.md
-│   ├── 2026-07-26_오전_카페대화.md
-│   └── ...
-│
-├── topics/                        # 주제별 재분류
-│   ├── 프로젝트-OP.md
-│   ├── 인간관계-친구A.md
-│   ├── 건강-운동.md
-│   └── ...
-│
-├── entities/                      # 개체별 (사람, 장소, 개념)
-│   ├── person-김철수.md
-│   ├── place-강남카페.md
-│   └── concept-AI에이전트.md
-│
-├── daily/                         # 일간 다이제스트
-│   ├── 2026-07-25.md
-│   └── ...
-│
-└── graph/                         # 마인드그래프 JSON
-    ├── 2026-07-25_session_001.json
-    └── ...
+vault/
+├── index.md                    # Master index
+├── sessions/                   # Raw session records
+│   └── 2026-07-25_team-meeting.md
+├── topics/                     # By subject
+│   └── project-OP.md
+├── entities/                   # By entity (person, place, concept)
+│   └── person-kim.md
+├── daily/                      # Daily digests
+│   └── 2026-07-25.md
+└── graph/                      # MindGraph JSON
 ```
 
-### 세션 마크다운 예시
+### Session Markdown Example
 
 ```markdown
 ---
 session_id: s_1721894400000
 date: 2026-07-25T14:30:00+09:00
 duration: 45m
-location: 강남구, 서울
+location: Gangnam, Seoul
 mood: productive
-participants: [나, 김철수]
-keywords: [AI, 에이전트, 마인드그래프, 통화]
+keywords: [AI, agent, mind-graph]
 ---
 
-# 2026-07-25 오후 팀미팅
+# Team Meeting
 
-## 요약
-AI 에이전트의 실시간 코칭 가능성에 대한 팀 논의.
+## Summary
+Discussion on real-time AI coaching feasibility.
 
-## 대화 기록
-- **14:30** 김철수: "이런 앱이 실제로 가능할까?"
-- **14:32** 나: "기술적으로는 이미 가능한 것들이야."
-- **14:35** 김철수: "근데 통화 중에 음성 변조는 불법 아냐?"
+## Conversation
+- 14:30 Kim: "Is this actually possible?"
+- 14:32 Me: "Technically, all of this is already possible."
 
-## 마인드그래프
-- AI에이전트 → 가능성 → 기술스택
-- 통화음성변조 → 법적문제 → 우회방법
+## Mind Graph
+- AI-Agent → Feasibility → Tech-Stack
 
-## 감정 흐름
-회의적 → 긍정적 → productive
-
-## 위치
-- 시작: 강남구 (37.5665, 126.9780)
-- 종료: 동일
-
-## 첨부
-- [[graph/2026-07-25_session_001.json|마인드그래프]]
+## Emotion Flow
+Skeptical → Positive → Productive
 ```
 
-### 주제별 재분류 알고리즘
-
-```
-세션 마크다운
-    │
-    ├─ 키워드 추출 (STT 결과 기반)
-    ├─ 임베딩 유사도로 기존 topics/ 과 매칭
-    │
-    ▼
-topics/프로젝트-OP.md 에 추가:
-    ### 2026-07-25 오후 팀미팅
-    - 김철수: "이런 앱이 실제로 가능할까?"
-    - [[sessions/2026-07-25_오후_팀미팅.md|전체 보기]]
-```
-
----
-
-## 6. 카테고리별 재정리 구조
-
-### `topics/` 디렉토리 자동 생성 규칙
-
-| 감지 패턴 | 카테고리 경로 |
-|----------|-------------|
-| 회의, 미팅, 프로젝트, 일정 | `업무/` |
-| 친구, 가족, 연인, 인간관계 | `관계/` |
-| 운동, 건강, 병원, 식단 | `건강/` |
-| 쇼핑, 구매, 가격, 결제 | `소비/` |
-| 여행, 이동, 장소, 경로 | `이동/` |
-| 학습, 공부, 책, 강의 | `학습/` |
-| 아이디어, 발상, 구상 | `창작/` |
-| 감정, 고민, 스트레스 | `감정/` |
-
-### `entities/` 자동 생성
-
-```markdown
-# person-김철수.md
-
-## 기본 정보
-- 첫 등장: 2026-06-15
-- 등장 횟수: 23회
-- 최근 대화: 2026-07-25
-
-## 대화 패턴
-- 말 빠르기: 빠름
-- 주요 주제: [AI, 스타트업]
-- 감정 톤: 긍정적 70% / 분석적 30%
-
-## 관련 세션
-- [[2026-07-25_오후_팀미팅]]
-- [[2026-07-20_저녁_술자리]]
-- ...
-```
-
----
-
-## 7. 앱 데이터 통합 파이프라인
-
-### 아키텍처
+## 6. App Data Integration Pipeline
 
 ```
 Android Content Providers
     │
     ▼
-DataCollector Service (백그라운드)
-    │
-    ├─ CallLog → 통화 기록.md
-    ├─ SMS → 문자 기록.md
-    ├─ Calendar → 일정.md
-    ├─ Contacts → 연락처.md
-    ├─ Health Connect → 건강.md
-    └─ UsageStats → 앱사용.md
+DataCollector Service (background)
+    ├─ CallLog → call-records.md
+    ├─ SMS → messages.md
+    ├─ Calendar → schedule.md
+    ├─ Contacts → contacts.md
+    ├─ Health Connect → health.md
+    └─ UsageStats → app-usage.md
     │
     ▼
 MarkdownExporter
-    │
-    ├─ sessions/ (시간순)
-    ├─ topics/ (주제별)
-    └─ entities/ (개체별)
+    ├─ sessions/ (chronological)
+    ├─ topics/ (by subject)
+    └─ entities/ (by entity)
     │
     ▼
-LLM 임베딩 → 벡터 DB → 의미 검색
+LLM Embedding → Vector DB → Semantic Search
 ```
-
-### 구현 우선순위
-
-| Phase | 데이터 | 난이도 |
-|:---:|------|:---:|
-| 1 | 마이크 대화 + 위치 + 카메라 | 🟢 이미 구현 |
-| 2 | 통화록 + 문자 + 캘린더 | 🟡 Content Provider |
-| 3 | 알림 + 연락처 | 🟡 Listener Service |
-| 4 | 건강 + 앱사용 + 브라우저 | 🔴 복잡한 권한 |
-
----
-
-## 부록: 파일 구조
-
-```
-lib/
-  services/
-    markdown_exporter.dart     # 마크다운 내보내기
-    vault_manager.dart          # vault/ 관리
-    topic_classifier.dart       # 주제 분류
-    data_collector.dart         # 앱 데이터 수집
-    power_manager.dart          # 전원 관리
-  screens/
-    onboarding_screen.dart      # 첫 실행 온보딩
-  models/
-    vault_entry.dart            # 마크다운 문서 모델
-```
-
-이 중 당장 구현 가능한 `MarkdownExporter`, `VaultManager`, `TopicClassifier`, `PowerManager`, `OnboardingScreen` 은 다음 단계에서 코드로 구현.
