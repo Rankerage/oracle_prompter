@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/oracle_provider.dart';
 import '../providers/app_providers.dart';
+import '../services/card_queue_service.dart';
 import 'mind_screen.dart';
 import 'oracle_chat_screen.dart';
 import 'eye_screen.dart';
@@ -17,6 +18,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentTab = 0;
+  final CardQueueService _cardQueue = CardQueueService();
 
   static const _tabs = <Widget>[
     MindScreen(),
@@ -25,6 +27,20 @@ class _HomeScreenState extends State<HomeScreen> {
     JournalScreen(),
     ControlScreen(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _cardQueue.start(context);
+    });
+  }
+
+  @override
+  void dispose() {
+    _cardQueue.stop();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
