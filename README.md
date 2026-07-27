@@ -2,16 +2,32 @@
 
 > **"귓속말로 모든 것을 도와줍니다."**
 >
-> AI whisper coach for every conversation — smarter, stealthier, always on.  
-> Just open the camera. No screen needed. Voice controls everything.
+> Your personal AI companion — whisper coach, memory keeper, learning partner.  
+> Not a developer tool. Not a coding agent. Just there, in your ear, for everything that matters.
 
 <p align="center">
   <img src="https://img.shields.io/badge/Platform-Android-brightgreen" alt="Android">
   <img src="https://img.shields.io/badge/License-MIT-blue" alt="MIT">
   <img src="https://img.shields.io/badge/Status-Alpha-orange" alt="Alpha">
-  <img src="https://img.shields.io/badge/Flutter-3.44-blue" alt="Flutter">
-  <img src="https://img.shields.io/badge/Inspired-Hermes_Agent-purple" alt="Hermes">
+  <img src="https://img.shields.io/badge/For-Everyone-9cf" alt="For Everyone">
 </p>
+
+---
+
+## 🎯 What OraclePrompter Is
+
+| ✅ Does | ❌ Does NOT |
+|--------|-----------|
+| 🎧 Whisper-coach your conversations | Write code or build apps |
+| 🧠 Build your personal mind graph | Run terminal commands |
+| 📖 Auto-journal your life | Edit files or manage servers |
+| 🃏 Learn your preferences via cards | Replace your IDE |
+| ⏰ Remind you of what matters | Debug your program |
+| 🔗 **Delegate to other agents** when needed | Act as a developer tool |
+
+> **O.P is not a coding agent. It's your companion.**  
+> Need code written? O.P can connect you to an agent that does.  
+> But O.P itself stays focused on YOU — your conversations, your learning, your life.
 
 ---
 
