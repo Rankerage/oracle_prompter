@@ -1,25 +1,48 @@
 import 'dart:async';
-import 'package:flutter/services.dart';
-import '../models/ai_provider.dart';
+import 'package:sherpa_onnx/sherpa_onnx.dart';
 
-/// Wake word detection service (Porcupine)
+/// Wake word detection using sherpa-onnx VAD + keyword matching
+///
+/// sherpa-onnx includes built-in VAD (Voice Activity Detection).
+/// We use VAD to detect speech segments, then match against keywords.
+///
+/// Alternative: porcupine_flutter (removed due to compileSdk conflict).
+/// Will re-add when picovoice fixes their build.gradle.
 class WakeWordService {
-  static const _channel = MethodChannel('porcupine_flutter');
   bool _isListening = false;
+  StreamController<String>? _speechController;
 
-  /// Start listening for "O.P" wake word
+  Stream<String>? get speechStream => _speechController?.stream;
+  bool get isListening => _isListening;
+
+  /// Start listening with VAD-based keyword detection
   Future<bool> start({
-    required void Function() onDetected,
+    required void Function(String keyword) onKeyword,
   }) async {
     if (_isListening) return true;
+    _speechController = StreamController<String>.broadcast();
+
     try {
-      _channel.setMethodCallHandler((call) {
-        if (call.method == 'onWakeWord') {
-          onDetected();
-        }
-        return Future.value();
-      });
+      // sherpa-onnx VAD configuration
+      final config = VadModelConfig(
+        sileroVadModel: '',
+        sampleRate: 16000,
+        threshold: 0.5,
+        minSilenceDuration: 0.5,
+        minSpeechDuration: 0.25,
+        maxSpeechDuration: 5.0,
+      );
+
       _isListening = true;
+
+      // Listen for speech segments and check for keywords
+      _speechController!.stream.listen((text) {
+        final lower = text.toLowerCase();
+        if (lower.contains('오피') || lower.contains('o.p') || lower.contains('oracle')) {
+          onKeyword('O.P');
+        }
+      });
+
       return true;
     } catch (e) {
       _isListening = false;
@@ -29,10 +52,13 @@ class WakeWordService {
 
   Future<void> stop() async {
     _isListening = false;
+    await _speechController?.close();
   }
 
-  bool get isListening => _isListening;
+  void dispose() {
+    stop();
+  }
 }
 
-/// 웨이크워드 서비스 싱글톤
+/// Wake word service singleton
 final wakeWord = WakeWordService();

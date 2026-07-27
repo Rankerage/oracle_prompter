@@ -1,6 +1,6 @@
 # OraclePrompter Alpha
 
-> **"Hi friend!! I am your OraclePrompter. I am always with you."**
+> **"귓속말로 모든 것을 도와줍니다."**
 >
 > AI whisper coach for every conversation — smarter, stealthier, always on.  
 > Just open the camera. No screen needed. Voice controls everything.

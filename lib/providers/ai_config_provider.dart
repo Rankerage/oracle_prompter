@@ -8,6 +8,11 @@ class AiConfigProvider extends ChangeNotifier {
   AiService? _service;
   bool _isLoading = false;
 
+  AiConfigProvider() {
+    // Default: on-device AI (free, no API key needed)
+    _service = AiServiceFactory.create(_config);
+  }
+
   AiProviderConfig get config => _config;
   AiService? get service => _service;
   bool get isLoading => _isLoading;
