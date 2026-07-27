@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../providers/oracle_provider.dart';
 import '../providers/app_providers.dart';
 import '../services/card_queue_service.dart';
+import '../services/conversation_engine.dart';
+import '../services/tts_service.dart';
 import 'mind_screen.dart';
 import 'oracle_chat_screen.dart';
 import 'eye_screen.dart';
@@ -18,7 +20,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentTab = 0;
-  final CardQueueService _cardQueue = CardQueueService();
 
   static const _tabs = <Widget>[
     MindScreen(),
@@ -28,11 +29,22 @@ class _HomeScreenState extends State<HomeScreen> {
     ControlScreen(),
   ];
 
+  final CardQueueService _cardQueue = CardQueueService();
+  late ConversationEngine _engine;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      final graph = context.read<MindGraphProvider>();
+      final oracle = context.read<OracleProvider>();
+      final tts = context.read<TtsService>();
+      _engine = ConversationEngine(graph: graph, oracle: oracle, tts: tts);
       _cardQueue.start(context);
+      // Demo: seed initial MindGraph
+      _engine.onUtterance('안녕하세요 OraclePrompter');
+      _engine.onUtterance('오늘 회의에서 프로젝트 방향을 논의했어요');
+      _engine.onUtterance('친구가 요즘 운동을 시작했대요');
     });
   }
 
