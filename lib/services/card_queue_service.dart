@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/conversation_card.dart';
+import '../models/mind_graph.dart';
 import 'card_generator.dart';
 
 /// 🃏 Card Queue with confidence-weighted Leitner
@@ -17,10 +18,12 @@ class CardQueueService {
   bool _showing = false;
   bool _inCall = false;
   BuildContext? _ctx;
+  void Function(String, NodeType)? _onGraphNode; // MindGraph callback
   static const minInterval = 60;
 
-  void start(BuildContext ctx) {
+  void start(BuildContext ctx, {void Function(String, NodeType)? onGraphNode}) {
     _ctx = ctx;
+    _onGraphNode = onGraphNode;
     _load();
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 40), (_) {
@@ -92,7 +95,17 @@ class CardQueueService {
 
   void _record(String statement, int confidence) {
     final ls = _leitner.putIfAbsent(statement, () => _Leitner());
-    ls.record(confidence); // +2 strong yes, +1 learned, -1 unsure, -2 strong no
+    ls.record(confidence);
+
+    // Add to MindGraph as a card_response node
+    final label = confidence >= 1 ? '👍 $statement' : '👎 $statement';
+    _onGraphNode?.call(label, NodeType.card_response);
+
+    // If learned (confidence >= 2), add learned node
+    if (confidence >= 2) {
+      _onGraphNode?.call('학습완료: $statement', NodeType.card_learned);
+    }
+
     _save();
   }
 

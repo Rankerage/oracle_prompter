@@ -40,7 +40,9 @@ class _HomeScreenState extends State<HomeScreen> {
       final oracle = context.read<OracleProvider>();
       final tts = context.read<TtsService>();
       _engine = ConversationEngine(graph: graph, oracle: oracle, tts: tts);
-      _cardQueue.start(context);
+      _cardQueue.start(context, onGraphNode: (label, type) {
+        graph.addLiveNode(label, type);
+      });
       // Demo: seed initial MindGraph
       _engine.onUtterance('안녕하세요 OraclePrompter');
       _engine.onUtterance('오늘 회의에서 프로젝트 방향을 논의했어요');

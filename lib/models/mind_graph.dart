@@ -28,13 +28,21 @@ class MindNode {
 }
 
 enum NodeType {
-  keyword,   // 핵심 키워드 (크게)
-  concept,   // 일반 개념
-  question,  // 질문
-  emotion,   // 감정
-  action,    // 행동/결정
-  location,  // 장소
-  person,    // 인물
+  // Conversation
+  keyword,
+  concept,
+  question,
+  emotion,
+  action,
+  location,
+  person,
+  // Cards & Learning
+  card_response,   // 사용자의 카드 응답
+  card_learned,    // 학습 완료된 항목
+  // System
+  setting_change,  // 설정 변경
+  log_event,       // 시스템 로그
+  preference,      // 취향/선호도
 }
 
 /// 마인드그래프의 엣지 (연관 관계)
@@ -68,13 +76,18 @@ enum EdgeType {
 
 /// 노드 타입별 색상
 const nodeColors = {
-  NodeType.keyword: Color(0xFFD4A574),   // 골드
-  NodeType.concept: Color(0xFF8BB8EA),   // 블루
-  NodeType.question: Color(0xFFC9A96E),  // 옐로우
-  NodeType.emotion: Color(0xFFE8847C),   // 코랄
-  NodeType.action: Color(0xFF7CCE8C),    // 그린
-  NodeType.location: Color(0xFFB088D4),  // 퍼플
-  NodeType.person: Color(0xFF6AC9D4),    // 시안
+  NodeType.keyword: Color(0xFFD4A574),
+  NodeType.concept: Color(0xFF8BB8EA),
+  NodeType.question: Color(0xFFC9A96E),
+  NodeType.emotion: Color(0xFFE8847C),
+  NodeType.action: Color(0xFF7CCE8C),
+  NodeType.location: Color(0xFFB088D4),
+  NodeType.person: Color(0xFF6AC9D4),
+  NodeType.card_response: Color(0xFFF0A060),
+  NodeType.card_learned: Color(0xFF60D080),
+  NodeType.setting_change: Color(0xFF8888CC),
+  NodeType.log_event: Color(0xFF888888),
+  NodeType.preference: Color(0xFFFFB0C0),
 };
 
 /// 엣지 타입별 스타일
