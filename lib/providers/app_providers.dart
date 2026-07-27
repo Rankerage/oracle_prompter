@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/mind_graph.dart';
 import '../models/journal_entry.dart';
 import '../widgets/mind_graph/force_simulation.dart';
+import '../services/markdown_exporter.dart';
 
 /// 마인드그래프 상태 관리
 class MindGraphProvider extends ChangeNotifier {
@@ -125,6 +126,7 @@ class JournalProvider extends ChangeNotifier {
   List<JournalEntry> _entries = [];
   List<Session> _sessions = [];
   String? _activeSessionId;
+  final MarkdownExporter _exporter = MarkdownExporter();
 
   List<JournalEntry> get entries => List.unmodifiable(_entries);
   List<Session> get sessions => List.unmodifiable(_sessions);
@@ -133,6 +135,8 @@ class JournalProvider extends ChangeNotifier {
   void addEntry(JournalEntry entry) {
     _entries.insert(0, entry);
     notifyListeners();
+    // Auto-flush to markdown vault
+    _flushToVault(entry);
   }
 
   void createSession(String title) {
@@ -153,8 +157,35 @@ class JournalProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void endSession() {
+  Future<void> endSession({List<MindNode>? mindNodes, List<MindEdge>? mindEdges}) async {
+    if (_activeSessionId != null && _entries.isNotEmpty) {
+      final entry = _entries.first;
+      await _exporter.exportSession(
+        sessionId: _activeSessionId!,
+        entry: entry,
+        mindNodes: mindNodes ?? [],
+        mindEdges: mindEdges ?? [],
+      );
+      await _exporter.exportDailyDigest(
+        date: DateTime.now(),
+        entries: _entries.where((e) =>
+          e.startTime.day == DateTime.now().day).toList(),
+      );
+      await _exporter.exportIndex();
+    }
     _activeSessionId = null;
     notifyListeners();
+  }
+
+  Future<void> _flushToVault(JournalEntry entry) async {
+    if (_activeSessionId != null) {
+      await _exporter.exportSession(
+        sessionId: _activeSessionId!,
+        entry: entry,
+        mindNodes: [],
+        mindEdges: [],
+      );
+      await _exporter.exportIndex();
+    }
   }
 }

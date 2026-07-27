@@ -25,11 +25,14 @@ class OPSessionService : Service() {
     companion object {
         const val CHANNEL_ID = "op_session_channel"
         const val NOTIFICATION_ID = 1001
-        const val CHANNEL_NAME = "OraclePrompter 세션"
+        const val CHANNEL_NAME = "OraclePrompter Session"
+        var isRunning = false
+            private set
     }
 
     override fun onCreate() {
         super.onCreate()
+        isRunning = true
         createNotificationChannel()
     }
 
@@ -90,7 +93,7 @@ class OPSessionService : Service() {
     }
 
     override fun onDestroy() {
-        // 리소스 정리: STT/TTS 엔진, 오디오 스트림
+        isRunning = false
         super.onDestroy()
     }
 }
