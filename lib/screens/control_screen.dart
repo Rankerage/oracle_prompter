@@ -9,6 +9,7 @@ import '../services/tts_service.dart';
 import '../models/oracle_mode.dart';
 import '../models/ai_provider.dart';
 import '../widgets/ai_provider_sheet.dart';
+import 'geek_settings_screen.dart';
 
 /// 🎛️ 제어 탭 — 통화·이펙트·녹음·세션·설정
 class ControlScreen extends StatefulWidget {
@@ -78,6 +79,11 @@ class _ControlScreenState extends State<ControlScreen> {
           // --- 전원 관리 ---
           _sectionHeader('🔋 전원', power.currentMode.label),
           _buildPowerSection(power),
+
+          const SizedBox(height: 20),
+
+          // --- Geek Mode 진입 ---
+          _buildGeekModeEntry(),
         ],
       ),
     );
@@ -518,6 +524,42 @@ class _ControlScreenState extends State<ControlScreen> {
             activeColor: const Color(0xFFD4A574),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildGeekModeEntry() {
+    return GestureDetector(
+      onTap: () => Navigator.push(context,
+        MaterialPageRoute(builder: (_) => const GeekSettingsScreen())),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Colors.purple.shade900.withAlpha(80), Colors.blue.shade900.withAlpha(40)],
+          ),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.purple.shade700.withAlpha(80)),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.terminal, color: Colors.purple.shade300, size: 24),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('🔧 Geek Mode', style: TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                  SizedBox(height: 2),
+                  Text('Advanced settings, OS workarounds, diagnostics',
+                    style: TextStyle(color: Color(0xFF888888), fontSize: 11)),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, color: Colors.purple.shade300),
+          ],
+        ),
       ),
     );
   }
