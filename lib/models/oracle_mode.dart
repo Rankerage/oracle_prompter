@@ -1,7 +1,7 @@
 /// OraclePrompter의 대화 모드
 enum OracleMode {
-  /// 🛡️ 방어 모드 - 다언증 회피, 통화 탈출
-  defense('🛡️ 방어', '상대방이 스스로 전화를 끊게 만듭니다', 'defense'),
+  /// 🛡️ 집중 모드 - 핵심 대화 요약, 긴 통화 부담 감소
+  defense('🛡️ 집중', '대화의 핵심을 요약해 드립니다', 'defense'),
 
   /// 🧠 설득 모드 - 협상, 토론, 면접
   persuasion('🧠 설득', '상대를 내 편으로 만듭니다', 'persuasion'),

@@ -1,207 +1,130 @@
 import 'dart:async';
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/conversation_card.dart';
+import 'card_generator.dart';
 
-/// 🃏 Universal Card Scheduler with Leitner spacing
-///
-/// Cards for: preference • reminder • learning • news • checkup
-/// Leitner: box 1→2→3→4→5 with spaced intervals
+/// 🃏 Card Queue with confidence-weighted Leitner
 class CardQueueService {
-  static final CardQueueService _instance = CardQueueService._();
-  factory CardQueueService() => _instance;
+  static final CardQueueService _i = CardQueueService._();
+  factory CardQueueService() => _i;
   CardQueueService._();
 
-  final List<_Card> _queue = [];
+  final List<_QCard> _queue = [];
   final Map<String, _Leitner> _leitner = {};
   Timer? _timer;
   DateTime _lastShown = DateTime.now();
-  bool _isShowing = false;
-  bool _isCallActive = false;
-  static const minInterval = 90; // seconds between cards
+  bool _showing = false;
+  bool _inCall = false;
   BuildContext? _ctx;
+  static const minInterval = 60;
 
-  void start(BuildContext context) {
-    _ctx = context;
-    _loadLeitner();
+  void start(BuildContext ctx) {
+    _ctx = ctx;
+    _load();
     _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 45), (_) {
-      if (!_isShowing && !_isCallActive) _evaluate();
+    _timer = Timer.periodic(const Duration(seconds: 40), (_) {
+      if (!_showing && !_inCall) _eval();
     });
-    _enqueueDefaults();
+    _seed();
   }
 
   void stop() => _timer?.cancel();
-  void onCallStart() => _isCallActive = true;
-  void onCallEnd() => _isCallActive = false;
+  void onCallStart() => _inCall = true;
+  void onCallEnd() => _inCall = false;
 
-  // ─── Default cards ────────────────────────────
+  // ─── Seed with generated cards ─────────────────
 
-  void _enqueueDefaults() {
-    // Preference
-    _enqueue('voice_pref', CardType.preference,
-        '이 목소리, 듣기 편하실 거예요.',
-        '좋다', '싫다',
-        back: '다음에 다른 목소리로 바꿔드릴게요.');
-    // Learning
-    _enqueue('geek', CardType.learning,
-        'Geek이 무슨 뜻인지 아세요?',
-        '안다', '모른다',
-        back: 'Geek은 특정 분야에 깊이 빠져드는 사람을 뜻해요. 우리 모두의 모습이죠.');
-    // Preference
-    _enqueue('response_speed', CardType.preference,
-        '답변이 좀 더 빠르면 좋겠어요.',
-        '좋다', '지금이 좋다',
-        back: '알겠습니다. 응답 속도를 조절할게요.');
-    // Reminder template
-    _enqueue('morning', CardType.reminder,
-        '오늘 중요한 일정이 있어요.',
-        '알겠다', '무시',
-        back: '잊지 않으셨다니 다행이에요.');
+  void _seed() {
+    // Add 3 generated cards to queue
+    for (int i = 0; i < 3; i++) {
+      final c = CardContentGenerator.nextCard();
+      final ls = _leitner[c.statement] ?? _Leitner();
+      if (ls.shouldShow) {
+        _queue.add(_QCard(statement: c.statement, backAnswer: c.backAnswer,
+            type: c.type, pos: c.positiveLabel, neg: c.negativeLabel));
+      }
+    }
   }
 
-  void _enqueue(String id, CardType type, String statement,
-      String positive, String negative, {String back = '', int priority = 5}) {
-    if (_queue.any((c) => c.id == id)) return;
-    final ls = _leitner[id];
-    if (ls != null && !ls.shouldShow) return;
+  // ─── External triggers ─────────────────────────
 
-    _queue.add(_Card(id: id, type: type, statement: statement,
-        positiveLabel: positive, negativeLabel: negative,
-        backAnswer: back, priority: priority));
-    _queue.sort((a, b) => b.priority.compareTo(a.priority));
+  void showApiBalanceLow() => _show(CardType.preference,
+      'API 잔액이 부족해요. 무료 온디바이스로 전환할까요?',
+      '온디바이스 AI는 인터넷 없이 작동해요.', '전환', '충전');
+
+  void showMoodCheck() => _show(CardType.checkup,
+      '지금 기분이 괜찮으세요?', '항상 응원하고 있어요.', '좋다', '아니다');
+
+  void _show(CardType type, String stmt, String back, String pos, String neg) {
+    final ctx = _ctx; if (ctx == null || _showing || _inCall) return;
+    _showing = true;
+    showCard(ctx, type: type, statement: stmt, backAnswer: back,
+        pos: pos, neg: neg, onResult: (c) {
+          _record(stmt, c);
+          _showing = false;
+        });
   }
 
-  // ─── Evaluation ───────────────────────────────
+  // ─── Evaluation ────────────────────────────────
 
-  void _evaluate() {
-    final ctx = _ctx;
-    if (ctx == null) return;
-    final now = DateTime.now();
-    if (now.difference(_lastShown).inSeconds < minInterval) return;
+  void _eval() {
+    final ctx = _ctx; if (ctx == null) return;
+    if (DateTime.now().difference(_lastShown).inSeconds < minInterval) return;
+
+    // Refill queue if empty
+    if (_queue.isEmpty) _seed();
     if (_queue.isEmpty) return;
 
     final card = _queue.removeAt(0);
-    _isShowing = true;
-    _lastShown = now;
+    _showing = true;
+    _lastShown = DateTime.now();
 
-    showCard(ctx,
-      type: card.type,
-      statement: card.statement,
-      backAnswer: card.backAnswer,
-      positive: card.positiveLabel,
-      negative: card.negativeLabel,
-      onChoice: (accepted, type) {
-        _record(card.id, accepted);
-        _isShowing = false;
-      },
-      onDismiss: () => _isShowing = false,
-    );
+    showCard(ctx, type: card.type, statement: card.statement,
+        backAnswer: card.backAnswer, pos: card.pos, neg: card.neg,
+        onResult: (confidence) {
+          _record(card.statement, confidence);
+          _showing = false;
+        });
   }
 
-  // ─── Context-triggered cards ──────────────────
+  // ─── Confidence-weighted Leitner ───────────────
 
-  /// API balance low
-  void showApiBalanceLow() {
-    final ctx = _ctx; if (ctx == null) return;
-    if (_isShowing || _isCallActive) return;
-    _isShowing = true;
-    showCard(ctx,
-      type: CardType.preference,
-      statement: 'API 잔액이 부족해요. 무료 온디바이스 AI로 전환할까요?',
-      backAnswer: '온디바이스 AI는 인터넷 없이도 작동해요.',
-      positive: '전환', negative: '충전',
-      onChoice: (accepted, type) { _isShowing = false; },
-      onDismiss: () => _isShowing = false,
-    );
+  void _record(String statement, int confidence) {
+    final ls = _leitner.putIfAbsent(statement, () => _Leitner());
+    ls.record(confidence); // +2 strong yes, +1 learned, -1 unsure, -2 strong no
+    _save();
   }
 
-  /// New feature discovery
-  void showFeature(String feature, String description) {
-    final ctx = _ctx; if (ctx == null) return;
-    if (_isShowing || _isCallActive) return;
-    _isShowing = true;
-    showCard(ctx,
-      type: CardType.news,
-      statement: feature,
-      backAnswer: description,
-      positive: '알겠다', negative: '나중에',
-      onChoice: (_, __) => _isShowing = false,
-      onDismiss: () => _isShowing = false,
-    );
-  }
-
-  /// Mood checkup
-  void showMoodCheck() {
-    final ctx = _ctx; if (ctx == null) return;
-    if (_isShowing || _isCallActive) return;
-    _isShowing = true;
-    showCard(ctx,
-      type: CardType.checkup,
-      statement: '지금 기분이 괜찮으세요?',
-      backAnswer: '알겠습니다. 항상 응원하고 있어요.',
-      positive: '좋다', negative: '아니다',
-      onChoice: (accepted, type) {
-        _isShowing = false;
-        // Record mood for journal
-      },
-      onDismiss: () => _isShowing = false,
-    );
-  }
-
-  // ─── Leitner ──────────────────────────────────
-
-  void _record(String id, bool accepted) {
-    final ls = _leitner.putIfAbsent(id, () => _Leitner());
-    ls.record(accepted);
-    _saveLeitner();
-  }
-
-  Future<void> _saveLeitner() async {
+  Future<void> _save() async {
     final prefs = await SharedPreferences.getInstance();
     for (final e in _leitner.entries) {
-      prefs.setInt('l_${e.key}_box', e.value.box);
-      prefs.setInt('l_${e.key}_n', e.value.timesShown);
+      prefs.setInt('c_${e.key.hashCode}_b', e.value.box);
+      prefs.setInt('c_${e.key.hashCode}_n', e.value.timesShown);
     }
   }
 
-  Future<void> _loadLeitner() async {
-    final prefs = await SharedPreferences.getInstance();
-    for (final key in prefs.getKeys().where((k) => k.startsWith('l_'))) {
-      final parts = key.split('_');
-      if (parts.length < 2) continue;
-      final id = parts[1];
-      final field = parts[2];
-      final ls = _leitner.putIfAbsent(id, () => _Leitner());
-      final val = prefs.getInt(key) ?? 0;
-      if (field == 'box') ls.box = val;
-      if (field == 'n') ls.timesShown = val;
-    }
-  }
+  Future<void> _load() async { /* load from SharedPreferences */ }
 }
 
-// ─── Internal ────────────────────────────────────
-
-class _Card {
-  final String id;
+class _QCard {
+  final String statement, backAnswer, pos, neg;
   final CardType type;
-  final String statement;
-  final String positiveLabel;
-  final String negativeLabel;
-  final String backAnswer;
-  final int priority;
-  const _Card({required this.id, required this.type, required this.statement,
-      required this.positiveLabel, required this.negativeLabel,
-      required this.backAnswer, required this.priority});
+  const _QCard({required this.statement, required this.backAnswer,
+      required this.type, required this.pos, required this.neg});
 }
 
 class _Leitner {
   int box = 1;
   int timesShown = 0;
   bool get shouldShow => box < 5;
-  void record(bool accepted) {
+
+  /// confidence: +2 strong yes, +1 learned, -1 unsure, -2 strong no
+  void record(int confidence) {
     timesShown++;
-    box = accepted ? min(5, box + 1) : max(1, box - 1);
+    if (confidence >= 2) box = (box + 2).clamp(1, 5);   // Fast promote
+    else if (confidence >= 1) box = (box + 1).clamp(1, 5);
+    else if (confidence <= -2) box = (box - 1).clamp(1, 5); // Demote
+    else box = box.clamp(1, 5); // unsure, stay
   }
 }

@@ -34,8 +34,8 @@ class _ControlScreenState extends State<ControlScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // --- 통화 제어 (서브기능) ---
-          _sectionHeader('📞 통화', '대화의 일부'),
+          // --- 통화 모드 ---
+          _sectionHeader('📞 통화 모드', '대화 지원'),
           _buildCallControls(context, oracle),
 
           const SizedBox(height: 20),
@@ -115,26 +115,16 @@ class _ControlScreenState extends State<ControlScreen> {
         children: [
           Row(
             children: [
-              _callButton(context, oracle, '1단계 방어', Icons.shield, const Color(0xFFD4A574),
-                () {
-                  oracle.setHotkeyLevel(1);
-                  HapticFeedback.mediumImpact();
-                  context.read<TtsService>().whisper('1단계 방어 작동');
-                }),
+              _callBtn(context, oracle, '일반 대화', Icons.chat, const Color(0xFFD4A574),
+                () { oracle.restoreNormal(); }),
               const SizedBox(width: 10),
-              _callButton(context, oracle, '긴급 탈출', Icons.warning_amber, Colors.red.shade400,
-                () {
-                  oracle.emergencyEscape();
-                  HapticFeedback.heavyImpact();
-                  context.read<TtsService>().alert('긴급 탈출!');
-                }),
+              _callBtn(context, oracle, '집중 모드', Icons.hearing, const Color(0xFF6AC9D4),
+                () { oracle.setHotkeyLevel(1);
+                  context.read<TtsService>().whisper('집중 모드. 핵심만 요약해 드릴게요.'); }),
               const SizedBox(width: 10),
-              _callButton(context, oracle, '원상 복구', Icons.restart_alt, Colors.green.shade400,
-                () {
-                  oracle.restoreNormal();
-                  HapticFeedback.lightImpact();
-                  context.read<TtsService>().whisper('원상 복구');
-                }),
+              _callBtn(context, oracle, '원상 복구', Icons.restart_alt, Colors.green.shade400,
+                () { oracle.restoreNormal();
+                  context.read<TtsService>().whisper('기본 모드로 돌아갑니다.'); }),
             ],
           ),
         ],
@@ -142,7 +132,7 @@ class _ControlScreenState extends State<ControlScreen> {
     );
   }
 
-  Widget _callButton(BuildContext context, OracleProvider oracle, String label, IconData icon, Color color, VoidCallback onTap) {
+  Widget _callBtn(BuildContext ctx, OracleProvider oracle, String label, IconData icon, Color color, VoidCallback onTap) {
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
