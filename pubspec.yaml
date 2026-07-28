@@ -40,6 +40,7 @@ dependencies:
   permission_handler: ^11.3.1  # 런타임 권한
   flutter_foreground_task: ^8.17.0  # 백그라운드 서비스
   wakelock_plus: ^1.2.10       # 화면 항상 켜기
+  fsrs: ^2.0.1
 dev_dependencies:
   flutter_test:
     sdk: flutter
