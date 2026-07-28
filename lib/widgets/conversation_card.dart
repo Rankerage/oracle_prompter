@@ -1,9 +1,10 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'ask_me_card.dart';
 
 /// Card types
-enum CardType { preference, reminder, learning, news, checkup }
+enum CardType { preference, reminder, learning, news, checkup, askMe }
 
 /// 🃏 Double-Tap Conversation Card
 ///
@@ -174,10 +175,13 @@ class _ConversationCardState extends State<ConversationCard>
   }
 
   Widget _choiceBtn(String label, bool value, Color color) {
-    // Universal symbols: ✕ = No, ○ = Yes (East Asia) / ✓ = Yes (Global)
     final symbol = value ? '○' : '✕';
     return GestureDetector(
       onTap: () => _tap(value),
+      onLongPress: () {
+        HapticFeedback.heavyImpact();
+        showAskMeCard(context, onSubmit: (question) {});
+      },
       child: Container(
         width: 72, height: 72,
         decoration: BoxDecoration(
@@ -200,6 +204,7 @@ class _ConversationCardState extends State<ConversationCard>
       CardType.learning   => (Icons.school, ''),
       CardType.news       => (Icons.newspaper, ''),
       CardType.checkup    => (Icons.favorite, ''),
+      CardType.askMe      => (Icons.chat, ''),
     };
     return Row(mainAxisSize: MainAxisSize.min, children: [
       Icon(icon, size: 13, color: color),
@@ -212,6 +217,7 @@ class _ConversationCardState extends State<ConversationCard>
     CardType.learning   => const Color(0xFFB088D4),
     CardType.news       => const Color(0xFF7CCE8C),
     CardType.checkup    => const Color(0xFFE8847C),
+    CardType.askMe      => const Color(0xFFB088D4),
   };
 
   @override
