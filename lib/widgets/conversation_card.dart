@@ -43,6 +43,8 @@ class _ConversationCardState extends State<ConversationCard>
 
   void _tap(bool accepted) {
     HapticFeedback.selectionClick();
+    // 🔊 Tok sound on flip
+    SystemSound.play(SystemSoundType.click);
     if (!_flipped) {
       _first = accepted ? 1 : 0;
       _flip.forward(); setState(() => _flipped = true);
