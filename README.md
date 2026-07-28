@@ -1,9 +1,9 @@
-# OraclePrompter Alpha — NoStressAI
+# 톡톡 (TokTok) — NoStressAI
 
-> **"귓속말로 모든 것을 도와줍니다."**
+> **"AI가 먼저 톡톡."**
 >
-> No commands. No syntax. No learning curve. No stress.  
-> Just cards. Tap ○ or ✕. That's it.  
+> No commands. No syntax. No stress.  
+> AI talks first. You just tap ○ or ✕.  
 > The world's first **NoStressAI** companion.
 
 <p align="center">
