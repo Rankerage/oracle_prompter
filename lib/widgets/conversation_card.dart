@@ -13,6 +13,7 @@ enum CardType { preference, reminder, learning, news, checkup, askMe }
 class ConversationCard extends StatefulWidget {
   final CardType type;
   final String statement, backAnswer, positiveLabel, negativeLabel;
+  final String? backImageUrl;
   final Color? accentColor;
   final bool speakAloud;
   final void Function(int confidence)? onResult;
@@ -101,8 +102,12 @@ class _ConversationCardState extends State<ConversationCard>
 
   Widget _back(Color color) => _card(
     Column(mainAxisSize: MainAxisSize.min, children: [
-      Text(widget.backAnswer, textAlign: TextAlign.center,
-        style: const TextStyle(color: Colors.white70, fontSize: 14, height: 1.5)),
+      if (widget.backImageUrl != null) ...[
+        ClipRRect(borderRadius: BorderRadius.circular(12),
+          child: Image.network(widget.backImageUrl!, height: 160, fit: BoxFit.cover)),
+        const SizedBox(height: 12),
+      ],
+      _buildRichText(widget.backAnswer),
       const SizedBox(height: 6),
       Text('한 번 더 눌러주세요', style: TextStyle(color: Colors.grey.shade500, fontSize: 11)),
       const SizedBox(height: 16),
@@ -139,6 +144,47 @@ class _ConversationCardState extends State<ConversationCard>
     child: Container(width: 44, height: 44, decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withAlpha(8), border: Border.all(color: Colors.white.withAlpha(20))),
       child: const Center(child: Text('▲', style: TextStyle(color: Color(0xFF888888), fontSize: 18)))),
   );
+
+  /// Rich text with LaTeX. $...$ = inline math, $$...$$ = block math
+  Widget _buildRichText(String text) {
+    // Simple: detect LaTeX patterns and render accordingly
+    final hasMath = text.contains(r'$');
+    if (!hasMath) {
+      return Text(text, textAlign: TextAlign.center,
+        style: const TextStyle(color: Colors.white70, fontSize: 14, height: 1.5));
+    }
+
+    // Split by $$...$$ blocks and $...$ inline
+    final parts = <Widget>[];
+    final regex = RegExp(r'\$\$(.+?)\$\$|\$(.+?)\$');
+    int lastEnd = 0;
+
+    for (final match in regex.allMatches(text)) {
+      if (match.start > lastEnd) {
+        parts.add(Text(text.substring(lastEnd, match.start), textAlign: TextAlign.center,
+          style: const TextStyle(color: Colors.white70, fontSize: 14, height: 1.5)));
+      }
+      final formula = match.group(1) ?? match.group(2) ?? '';
+      final isBlock = match.group(1) != null;
+      parts.add(Container(
+        width: double.infinity,
+        padding: EdgeInsets.symmetric(vertical: isBlock ? 8 : 0),
+        child: Text(formula.trim(), textAlign: isBlock ? TextAlign.center : TextAlign.start,
+          style: TextStyle(color: const Color(0xFFFFD080), fontSize: isBlock ? 16 : 14,
+            fontFamily: 'monospace', fontStyle: FontStyle.italic))),
+      );
+      lastEnd = match.end;
+    }
+
+    if (lastEnd < text.length) {
+      parts.add(Text(text.substring(lastEnd), textAlign: TextAlign.center,
+        style: const TextStyle(color: Colors.white70, fontSize: 14, height: 1.5)));
+    }
+
+    return parts.length == 1
+        ? parts.first
+        : Column(mainAxisSize: MainAxisSize.min, children: parts);
+  }
 
   Widget _badge(Color color) {
     final icon = switch (widget.type) {
