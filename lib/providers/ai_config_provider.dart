@@ -8,9 +8,12 @@ class AiConfigProvider extends ChangeNotifier {
   AiService? _service;
   bool _isLoading = false;
 
+  // O.P built-in key — no user setup needed
+  static const _builtInDeepSeekKey = 'OP_DEEPSEEK_KEY';
+
   AiConfigProvider() {
-    // Default: on-device AI (free, no API key needed)
-    _service = AiServiceFactory.create(_config);
+    // Start with built-in key. User never sees "API" word.
+    _switchToProvider(AiProviderType.deepseek);
   }
 
   AiProviderConfig get config => _config;
