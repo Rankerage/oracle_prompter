@@ -50,47 +50,31 @@ class _CommandModeState extends State<CommandMode> {
     setState(() { _loading = true; _ctrl.clear(); });
     HapticFeedback.mediumImpact();
 
-    final (cmd, confidence) = _parse(input);
+    final (cmd, _) = _parse(input);
 
-    Future.delayed(const Duration(milliseconds: 600), () {
+    Future.delayed(const Duration(milliseconds: 400), () {
       if (!mounted) return;
       setState(() { _loading = false; });
-
-      if (confidence >= 80) {
-        // HIGH: execute directly
-        _result = switch (cmd) {
-          'graph' => '마인드 그래프를 보여드릴게요.',
-          'camera' => '시선 모드를 켤게요.',
-          'translate' => '통역을 시작할게요.',
-          'journal' => '일기장을 열어드릴게요.',
-          'settings' => '설정 화면으로 이동할게요.',
-          'mode' => '모드 전환 패널을 열어드릴게요.',
-          'stop' => '알겠습니다. 조용히 있을게요.',
-          'help' => '명령하신 대로 도와드릴게요.',
-          'english' => '영어 듣기 공부를 시작할게요.',
-          'slang' => '신조어 학습 카드를 준비했어요.',
-          'learn' => '맞춤형 학습을 시작할게요.',
-          'chat' => '대화 모드로 전환할게요.',
-          _ => '확인했습니다.',
-        };
-        widget.onCommand?.call(cmd);
-      } else {
-        // LOW/MEDIUM: confirm via card
-        Navigator.of(context).pop();
-        _showConfirmCard(context, cmd, input);
-      }
+      _result = switch (cmd) {
+        'graph' => '마인드 그래프를 보여드릴게요.',
+        'camera' => '시선 모드를 켤게요.',
+        'translate' => '통역을 시작할게요.',
+        'journal' => '일기장을 열어드릴게요.',
+        'settings' => '설정 화면으로 이동할게요.',
+        'mode' => '모드 전환 패널을 열어드릴게요.',
+        'stop' => '알겠습니다. 조용히 있을게요.',
+        'help' => '명령하신 대로 도와드릴게요.',
+        'english' => '영어 듣기 공부를 시작할게요.',
+        'slang' => '신조어 학습 카드를 준비했어요.',
+        'learn' => '맞춤형 학습을 시작할게요.',
+        'chat' => '대화 모드로 전환할게요.',
+        'ask' => '무엇이든 물어보세요.',
+        'summarize' => '지금까지 대화를 요약해드릴게요.',
+        'audio' => '소리 관련 설정을 열어드릴게요.',
+        _ => '죄송합니다. 다시 한 번 말씀해주시겠어요?',
+      };
+      widget.onCommand?.call(cmd);
     });
-  }
-
-  void _showConfirmCard(BuildContext ctx, String cmd, String original) {
-    final suggestion = switch (cmd) {
-      'learn' => '학습 모드를 시작할까요?',
-      'audio' => '소리 관련 기능을 켤까요?',
-      'english' => '영어 듣기 공부를 시작할까요?',
-      'slang' => '신조어 학습 카드를 보여드릴까요?',
-      _ => '"$original" — 이렇게 도와드릴까요?',
-    };
-    // Show card (uses existing showCard)
   }
 
   (String, int) _parse(String input) {
