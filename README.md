@@ -47,8 +47,9 @@ Just cards. Tap "Yes" or "No". That's it.
 | Type commands, remember syntax | Tap cards, speak naturally |
 | Built for developers | **Built for everyone** |
 | Stares at you from a screen | Whispers in your ear |
+| You configure everything upfront | **Perfect in one week** — it learns you |
 
-> **"The learning curve is flat. Because it's not a tool — it's a companion."**
+> **"설정은 없습니다. 일주일만 같이 지내면 완벽해집니다."**
 
 ---
 
