@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'command_mode.dart';
 import 'ask_me_card.dart';
+import 'learning_mode.dart';
 
 enum CardType { preference, reminder, learning, news, checkup, askMe }
 
