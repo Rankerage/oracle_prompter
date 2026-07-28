@@ -55,13 +55,15 @@ Just cards. Tap "Yes" or "No". That's it.
 
 ```bash
 # 1. Download APK from Releases
-# 2. Install + grant microphone permission (only one required)
-# 3. Say "O.P"
+# 2. Install. Grant microphone permission.
+# 3. Say "O.P" — coaching begins.
 
-# Done. Coaching begins immediately.
+# Works on ANY Android 10+ phone, even 2GB RAM.
+# Uses free API by default. On-device AI optional.
 ```
 
-**Minimum**: Android 10+, 4GB RAM, 64-bit CPU  
+**Minimum**: Android 10+, 2GB RAM (API mode)  
+**For on-device**: 4GB RAM, 64-bit CPU  
 **Recommended**: Android 13+, 8GB RAM, Bluetooth 5.0
 
 ---
