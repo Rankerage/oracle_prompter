@@ -15,18 +15,34 @@ class LearningMode {
   int _correct = 0;
   int _total = 0;
   bool _active = true;
-  final Map<String, int> _leitner = {}; // card → box
+  final Map<String, int> _leitner = {};
+  bool _generating = false; // 백그라운드 생성 중
 
-  LearningMode._(this._topic, this._cards);
+  // ─── Start with first few cards, generate more in background ──
 
-  // ─── Factory from topic ────────────────────────
+  static Future<LearningMode> start(String topic, {Future<List<_Flashcard>> Function()? generate}) async {
+    // 즉시 보여줄 기초 카드
+    final seed = _seedCards(topic);
+    final mode = LearningMode._(topic, seed);
 
-  factory LearningMode.fromTopic(String topic) {
+    // 백그라운드에서 추가 카드 생성
+    if (generate != null) {
+      mode._generating = true;
+      generate().then((newCards) {
+        mode._cards.addAll(newCards);
+        mode._generating = false;
+      });
+    }
+
+    return mode;
+  }
+
+  static List<_Flashcard> _seedCards(String topic) {
     return switch (topic) {
-      '신조어' => LearningMode._('신조어', _slangCards),
-      'IT' || 'it' => LearningMode._('IT 용어', _itCards),
-      '영어' => LearningMode._('영어', _englishCards),
-      _ => LearningMode._(topic, _generalCards),
+      '신조어' => _slangCards.take(4).toList(),
+      'IT' => _itCards.take(3).toList(),
+      '영어' => _englishCards.take(3).toList(),
+      _ => _generalCards,
     };
   }
 
@@ -72,6 +88,8 @@ class LearningMode {
   bool get allMastered => !_active && _total > 0;
   double get accuracy => _total > 0 ? _correct / _total : 0;
   String get topic => _topic;
+  bool get isGenerating => _generating;
+  int get cardCount => _cards.length;
 
   String get summary =>
       '$_topic 학습 결과\n'
