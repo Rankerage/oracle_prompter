@@ -1,57 +1,91 @@
-/// 🧠 Full AI Learning — Leitner with AI-tunable handles
+import 'dart:math';
+
+/// 🧠 Full AI Learning — Leitner + AI Tunable Handles
 ///
-/// Traditional Leitner: fixed intervals. One-size-fits-all.
-/// Full AI Learning:   AI adjusts every parameter per user.
+/// Sebastian Leitner published the method in "So lernt man lernen" (1972).
+/// No patent. Public domain. We implement from scratch.
+///
+/// EVERY parameter is a handle the AI can grip.
 class AILeitnerEngine {
   final String _userId;
+  final String _subject;
 
-  // ─── AI-tunable handles ────────────────────────
-  double _promotionSpeed = 1.0;   // 0.5~2.0. Higher = promote faster
-  double _demotionSpeed = 1.0;    // 0.5~2.0. Higher = demote faster
-  double _intervalScale = 1.0;    // 0.5~2.0. Higher = longer gaps
-  int _promotionThreshold = 3;    // consecutive correct to promote
-  int _demotionThreshold = 2;     // consecutive wrong to demote
-  double _forgetRate = 0.3;       // 0.1~0.5. How fast this user forgets
-  double _fatigueFactor = 0.0;    // 0~1. Current mental fatigue
-  int _optimalHour = 10;          // Best learning hour (from data)
-  double _accuracy = 0.8;         // Rolling accuracy
+  // ─── All handles ──────────────────────────────
 
-  // ─── AI can tune these based on user patterns ──
+  int _numBoxes = 5;                    // 3~10 boxes
+  double _promotionSpeed = 1.0;         // 0.5~2.0
+  double _demotionSpeed = 1.0;          // 0.5~2.0
+  int _promotionStreak = 3;             // 1~5
+  int _demotionStreak = 2;              // 1~5
+  double _baseInterval = 4.0;           // hours (box 1)
+  double _intervalMultiplier = 2.0;     // 각 박스 간격 배수
+  double _forgetRate = 0.3;             // 0.1~0.5
+  double _fatigue = 0.0;                // 0~1
+  int _optimalHour = 10;                // 0~23
+  double _accuracy = 0.8;
+  double _speed = 1.0;                  // 응답 속도 기반 조정
+  int _maxCardsPerSession = 20;
 
-  void tuneByAI({
-    double? promotionSpeed,
-    double? intervalScale,
-    int? promotionThreshold,
-    double? forgetRate,
-    double? fatigueFactor,
+  AILeitnerEngine({required String userId, required String subject})
+      : _userId = userId, _subject = subject;
+
+  // ─── AI tunes any handle ──────────────────────
+
+  void tune({
+    int? numBoxes, double? promotionSpeed, double? intervalMultiplier,
+    int? promotionStreak, double? forgetRate, double? fatigue,
+    double? baseInterval, int? maxCardsPerSession,
   }) {
+    if (numBoxes != null) _numBoxes = numBoxes.clamp(3, 10);
     if (promotionSpeed != null) _promotionSpeed = promotionSpeed.clamp(0.5, 2.0);
-    if (intervalScale != null) _intervalScale = intervalScale.clamp(0.5, 2.0);
-    if (promotionThreshold != null) _promotionThreshold = promotionThreshold.clamp(1, 5);
+    if (intervalMultiplier != null) _intervalMultiplier = intervalMultiplier.clamp(1.2, 4.0);
+    if (promotionStreak != null) _promotionStreak = promotionStreak.clamp(1, 5);
     if (forgetRate != null) _forgetRate = forgetRate.clamp(0.1, 0.5);
-    if (fatigueFactor != null) _fatigueFactor = fatigueFactor.clamp(0.0, 1.0);
+    if (fatigue != null) _fatigue = fatigue.clamp(0.0, 1.0);
+    if (baseInterval != null) _baseInterval = baseInterval.clamp(1.0, 24.0);
+    if (maxCardsPerSession != null) _maxCardsPerSession = maxCardsPerSession.clamp(5, 100);
   }
 
-  bool shouldPromote(int streak) => streak >= (_promotionThreshold / _promotionSpeed).round();
-  bool shouldDemote(int failStreak) => failStreak >= _demotionThreshold;
+  // ─── Dynamic box logic ────────────────────────
 
-  /// Get next review interval (hours)
+  int get numBoxes => _numBoxes;
+
+  /// Cards this box can hold before spacing pushes some out
+  int boxCapacity(int box) {
+    // Higher boxes hold MORE cards (they're already well-learned)
+    return (box * 10 * _promotionSpeed).round().clamp(10, 500);
+  }
+
+  /// Hours until next review for this box
   int nextInterval(int box) {
-    final base = [0, 4, 24, 72, 168, 336, 720]; // 0h, 4h, 1d, 3d, 7d, 14d, 30d
-    final i = (box.clamp(0, 6) * _intervalScale).round().clamp(0, 6);
-    return (base[i] * (1 + _forgetRate)).round();
+    final raw = _baseInterval * pow(_intervalMultiplier, box - 1);
+    return (raw * (1 + _forgetRate)).round();
   }
 
-  AILeitnerEngine(this._userId);
+  /// Should promote from box b to b+1?
+  bool shouldPromote(int correctStreak) =>
+      correctStreak >= (_promotionStreak / _promotionSpeed).round();
 
-  /// For LLM context — explain current state
+  /// Should demote from box b to b-1?
+  bool shouldDemote(int wrongStreak) => wrongStreak >= _demotionStreak;
+
+  /// Max cards to show this session (adjusted for fatigue)
+  int get cardsThisSession =>
+      (_maxCardsPerSession * (1 - _fatigue * 0.5)).round().clamp(3, _maxCardsPerSession);
+
+  // ─── Context for LLM ──────────────────────────
+
   String get contextForAI => '''
-User learning profile:
-- Accuracy: ${(_accuracy * 100).round()}%
-- Promotion speed: ${_promotionSpeed.toStringAsFixed(1)}
-- Forget rate: ${_forgetRate.toStringAsFixed(1)}
-- Fatigue: ${(_fatigueFactor * 100).round()}%
-- Best learning hour: ${_optimalHour}:00
-- Current promotion threshold: $_promotionThreshold correct in a row
+Subject: $_subject
+User: $_userId
+Accuracy: ${(_accuracy * 100).round()}%
+Boxes: $_numBoxes compartments
+Promotion: $_promotionStreak correct → up (speed ${_promotionSpeed}x)
+Interval base: ${_baseInterval}h, multiplier: ${_intervalMultiplier}x
+Forget rate: $_forgetRate
+Fatigue: ${(_fatigue * 100).round()}%
+Optimal hour: ${_optimalHour}:00
+Cards per session: $cardsThisSession
+Adjust any parameter based on performance data.
 ''';
 }
