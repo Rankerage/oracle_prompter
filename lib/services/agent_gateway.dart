@@ -36,13 +36,14 @@ class AgentGateway {
   _AgentConfig? _routeAgent(String task) {
     final lower = task.toLowerCase();
 
-    // Coding → coding agent
-    if (_matches(lower, ['코드', '프로그래밍', '앱', '개발', '웹사이트', '버그', '빌드'])) {
-      return _agents['coder'] ?? _AgentConfig(
-        name: 'Coding Agent',
-        description: '코드 작성과 디버깅을 전문으로 하는 에이전트',
-        endpoint: 'https://api.openrouter.ai/v1/chat/completions',
-        model: 'anthropic/claude-sonnet-4',
+    // Coding/technical → Hermes Agent (best for dev tasks)
+    if (_matches(lower, ['코드', '프로그래밍', '앱', '개발', '웹사이트', '버그', '빌드',
+         '파일', '검색', '터미널', '스크립트', '배포', '커밋', '푸시'])) {
+      return _agents['hermes'] ?? _AgentConfig(
+        name: 'Hermes Agent',
+        description: 'Nous Research의 만능 AI 에이전트. 코딩·파일·터미널·웹 모든 작업 수행.',
+        endpoint: 'http://localhost:11434/hermes',
+        model: 'hermes',
       );
     }
 
