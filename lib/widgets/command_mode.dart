@@ -43,6 +43,20 @@ class _CommandModeState extends State<CommandMode> {
     '요약': ('summarize', 80),
   };
 
+  // FAQ — no LLM needed
+  static const _faq = {
+    '목소리': '설정에서 음성 속도와 톤을 바꾸실 수 있어요.',
+    '통역': '▲ 버튼을 누르고 "통역해줘"라고 말씀하시면 실시간 통역을 시작해요.',
+    '카메라': '시선 모드는 카메라로 함께 보면서 도와드리는 기능이에요.',
+    '일기': '하루 대화가 자동으로 일기로 저장돼요. 하단 일기 탭에서 확인하세요.',
+    '그래프': '마인드 그래프는 대화 내용을 시각화해서 보여줘요.',
+    'API': 'API 키를 등록하면 더 똑똑한 AI를 무료로 쓰실 수 있어요.',
+    '모델': '온디바이스 모델을 다운로드하면 인터넷 없이도 AI를 쓸 수 있어요.',
+    '카드': '카드는 AI가 먼저 말을 거는 방식이에요. ○나 ✕만 누르면 돼요.',
+    '녹음': '마이크는 항상 켜져 있어요. 중요한 순간만 저장하고 원본은 지워요.',
+    '사생활': '모든 데이터는 기본적으로 기기 안에만 저장돼요.',
+  };
+
   void _submit() {
     final input = _ctrl.text.trim();
     if (input.isEmpty) return;
@@ -71,7 +85,7 @@ class _CommandModeState extends State<CommandMode> {
         'ask' => '무엇이든 물어보세요.',
         'summarize' => '지금까지 대화를 요약해드릴게요.',
         'audio' => '소리 관련 설정을 열어드릴게요.',
-        _ => '죄송합니다. 다시 한 번 말씀해주시겠어요?',
+        _ => _faq.containsKey(cmd) ? _faq[cmd]! : '죄송합니다. 다시 한 번 말씀해주시겠어요?',
       };
       widget.onCommand?.call(cmd);
     });
@@ -84,6 +98,14 @@ class _CommandModeState extends State<CommandMode> {
       if (input.contains(e.key) && e.value.$2 > bestConf) {
         bestConf = e.value.$2;
         bestCmd = e.value.$1;
+      }
+    }
+    // If no command matched, check FAQ
+    if (bestCmd == 'unknown') {
+      for (final e in _faq.entries) {
+        if (input.contains(e.key)) {
+          return (e.key, 60); // FAQ match, medium confidence
+        }
       }
     }
     return (bestCmd, bestConf);
