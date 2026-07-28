@@ -6,6 +6,7 @@ import '../models/mind_graph.dart';
 import 'card_generator.dart';
 import 'card_optimizer.dart';
 import 'ai_timing_engine.dart';
+import '../widgets/chip_card.dart';
 
 /// 🃏 Card Queue with confidence-weighted Leitner
 class CardQueueService {
