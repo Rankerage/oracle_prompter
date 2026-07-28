@@ -17,17 +17,22 @@ class CardFirstLauncher {
   CardFirstLauncher(this._context);
 
   Future<bool> run() async {
-    // Phase 1: Welcome (no model needed)
     _steps.addAll([
+      // Level 0: 바로 사용 가능 (모델 불필요)
       _CardStep('OraclePrompter에 오신 것을 환영합니다.',
-          back: '귓속말로 모든 것을 도와드릴게요. 카드로 대화해요.',
+          back: '지금 바로 카드 대화, 명령, 일기 기능을 쓰실 수 있어요.\nAI 모델 없이도 기본 기능은 모두 작동합니다.',
           pos: '시작', neg: '나중에', type: CardType.preference),
       _CardStep('마이크 권한이 필요해요.',
-          back: '대화 내용을 이해하려면 마이크가 필요합니다.',
+          back: '음성으로 명령하고 대화할 수 있게 해드릴게요.',
           pos: '허용', neg: '나중에', type: CardType.preference),
-      _CardStep('인터넷 없이 작동하는 온디바이스 AI를 쓸 수 있어요.',
-          back: 'AI 모델을 다운로드하면 인터넷 없이도 모든 기능을 쓸 수 있습니다.',
-          pos: '다운로드', neg: '나중에', type: CardType.preference),
+      // Level 1: API 키 등록 (선택)
+      _CardStep('더 똑똑한 AI를 무료로 쓰실 수 있어요.',
+          back: 'DeepSeek API는 하루 500회까지 무료입니다.\nAPI 키만 입력하면 코칭과 채팅이 훨씬 똑똑해져요.',
+          pos: 'API 등록', neg: '나중에', type: CardType.news),
+      // Level 2: 온디바이스 모델 (선택)
+      _CardStep('인터넷 없이도 AI를 쓸 수 있어요.',
+          back: '온디바이스 모델을 다운로드하면 비행기 안에서도 모든 기능을 쓸 수 있어요.\n2.4GB, Wi-Fi에서만 다운로드돼요.',
+          pos: '다운로드', neg: '나중에', type: CardType.news),
     ]);
 
     return _showNext();
