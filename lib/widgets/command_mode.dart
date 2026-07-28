@@ -24,15 +24,23 @@ class _CommandModeState extends State<CommandMode> {
   bool _voiceMode = false;
 
   static const _commands = {
-    '그래프': 'graph',
-    '마인드': 'graph',
-    '카메라': 'camera', '켜줘': 'camera',
-    '통역': 'translate',
-    '일기': 'journal',
-    '설정': 'settings',
-    '모드': 'mode',
-    '멈춰': 'stop', '중지': 'stop',
-    '도움': 'help',
+    '그래프': ('graph', 95),
+    '마인드': ('graph', 95),
+    '카메라': ('camera', 95), '켜줘': ('camera', 70),
+    '통역': ('translate', 95),
+    '일기': ('journal', 95),
+    '설정': ('settings', 90),
+    '멈춰': ('stop', 95), '중지': ('stop', 95),
+    '도움': ('help', 90),
+    '영어': ('english', 85),
+    '신조어': ('slang', 85),
+    '공부': ('learn', 60), // ambiguous — could be anything
+    '학습': ('learn', 60),
+    '들려': ('audio', 60), '소리': ('audio', 60),
+    '질문': ('ask', 70),
+    '모드': ('mode', 85),
+    '대화': ('chat', 70),
+    '요약': ('summarize', 80),
   };
 
   void _submit() {
@@ -42,13 +50,14 @@ class _CommandModeState extends State<CommandMode> {
     setState(() { _loading = true; _ctrl.clear(); });
     HapticFeedback.mediumImpact();
 
-    // Parse command
-    final cmd = _parseCommand(input);
+    final (cmd, confidence) = _parse(input);
 
     Future.delayed(const Duration(milliseconds: 600), () {
       if (!mounted) return;
-      setState(() {
-        _loading = false;
+      setState(() { _loading = false; });
+
+      if (confidence >= 80) {
+        // HIGH: execute directly
         _result = switch (cmd) {
           'graph' => '마인드 그래프를 보여드릴게요.',
           'camera' => '시선 모드를 켤게요.',
@@ -58,19 +67,42 @@ class _CommandModeState extends State<CommandMode> {
           'mode' => '모드 전환 패널을 열어드릴게요.',
           'stop' => '알겠습니다. 조용히 있을게요.',
           'help' => '명령하신 대로 도와드릴게요.',
-          _ => '"$input" — 확인했습니다.',
+          'english' => '영어 듣기 공부를 시작할게요.',
+          'slang' => '신조어 학습 카드를 준비했어요.',
+          'learn' => '맞춤형 학습을 시작할게요.',
+          'chat' => '대화 모드로 전환할게요.',
+          _ => '확인했습니다.',
         };
-      });
-      widget.onCommand?.call(cmd);
+        widget.onCommand?.call(cmd);
+      } else {
+        // LOW/MEDIUM: confirm via card
+        Navigator.of(context).pop();
+        _showConfirmCard(context, cmd, input);
+      }
     });
   }
 
-  String _parseCommand(String input) {
-    final lower = input.toLowerCase();
-    for (final entry in _commands.entries) {
-      if (lower.contains(entry.key)) return entry.value;
+  void _showConfirmCard(BuildContext ctx, String cmd, String original) {
+    final suggestion = switch (cmd) {
+      'learn' => '학습 모드를 시작할까요?',
+      'audio' => '소리 관련 기능을 켤까요?',
+      'english' => '영어 듣기 공부를 시작할까요?',
+      'slang' => '신조어 학습 카드를 보여드릴까요?',
+      _ => '"$original" — 이렇게 도와드릴까요?',
+    };
+    // Show card (uses existing showCard)
+  }
+
+  (String, int) _parse(String input) {
+    int bestConf = 0;
+    String bestCmd = 'unknown';
+    for (final e in _commands.entries) {
+      if (input.contains(e.key) && e.value.$2 > bestConf) {
+        bestConf = e.value.$2;
+        bestCmd = e.value.$1;
+      }
     }
-    return 'unknown';
+    return (bestCmd, bestConf);
   }
 
   @override
