@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'command_mode.dart';
 import 'ask_me_card.dart';
 
 enum CardType { preference, reminder, learning, news, checkup, askMe }
@@ -53,10 +54,12 @@ class _ConversationCardState extends State<ConversationCard>
     }
   }
 
-  void _openAsk() {
+  void _openCommand() {
     HapticFeedback.mediumImpact();
-    Navigator.of(context).pop();
-    showAskMeCard(context, onSubmit: (q) {});
+    Navigator.of(context).pop(); // dismiss current card
+    showCommandMode(context, onCommand: (cmd) {
+      // Route commands: graph, camera, translate, etc.
+    });
   }
 
   @override
@@ -129,7 +132,7 @@ class _ConversationCardState extends State<ConversationCard>
   );
 
   Widget _centerBtn(Color color) => GestureDetector(
-    onTap: _openAsk,
+    onTap: _openCommand,
     child: Container(width: 44, height: 44, decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withAlpha(8), border: Border.all(color: Colors.white.withAlpha(20))),
       child: const Center(child: Text('▲', style: TextStyle(color: Color(0xFF888888), fontSize: 18)))),
   );
