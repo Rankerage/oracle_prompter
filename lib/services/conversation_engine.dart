@@ -3,6 +3,7 @@ import '../models/mind_graph.dart';
 import '../providers/app_providers.dart';
 import '../providers/oracle_provider.dart';
 import '../services/tts_service.dart';
+import '../services/card_optimizer.dart';
 import '../services/card_queue_service.dart';
 
 /// 🧠 Unified Conversation Engine
@@ -55,6 +56,8 @@ class ConversationEngine {
       if (tip != null && _tts != null) {
         _oracle.receiveCoachingTip(tip);
         _tts!.whisper(tip);
+        // Signal optimizer that coaching happened
+        CardOptimizer().onCoachingEvent();
       }
     }
   }

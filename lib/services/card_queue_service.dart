@@ -4,6 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/conversation_card.dart';
 import '../models/mind_graph.dart';
 import 'card_generator.dart';
+import 'card_optimizer.dart';
+import 'ai_timing_engine.dart';
 
 /// 🃏 Card Queue with confidence-weighted Leitner
 class CardQueueService {
@@ -73,7 +75,16 @@ class CardQueueService {
 
   void _eval() {
     final ctx = _ctx; if (ctx == null) return;
-    if (DateTime.now().difference(_lastShown).inSeconds < minInterval) return;
+    if (!AITimingEngine().shouldAsk()) return;
+
+    final now = DateTime.now();
+    if (now.difference(_lastShown).inSeconds < minInterval) return;
+
+    // Every 5th card: optimizer tuning question
+    if (_leitner.length % 5 == 0 && _queue.isEmpty) {
+      CardOptimizer().askNext(ctx);
+      return;
+    }
 
     // Refill queue if empty
     if (_queue.isEmpty) _seed();
@@ -81,7 +92,8 @@ class CardQueueService {
 
     final card = _queue.removeAt(0);
     _showing = true;
-    _lastShown = DateTime.now();
+    _lastShown = now;
+    AITimingEngine().onCardShown();
 
     showCard(ctx, type: card.type, statement: card.statement,
         backAnswer: card.backAnswer, pos: card.pos, neg: card.neg,

@@ -4,6 +4,7 @@ import '../providers/oracle_provider.dart';
 import '../providers/app_providers.dart';
 import '../services/card_queue_service.dart';
 import '../services/conversation_engine.dart';
+import '../services/card_optimizer.dart';
 import '../services/tts_service.dart';
 import 'mind_screen.dart';
 import 'oracle_chat_screen.dart';
@@ -40,6 +41,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final oracle = context.read<OracleProvider>();
       final tts = context.read<TtsService>();
       _engine = ConversationEngine(graph: graph, oracle: oracle, tts: tts);
+      CardOptimizer().initDefaults();
       _cardQueue.start(context, onGraphNode: (label, type) {
         graph.addLiveNode(label, type);
       });
