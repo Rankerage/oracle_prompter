@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/ai_provider.dart';
+import 'rate_limiter.dart';
 
 /// AI 대화 메시지
 class AiMessage {
@@ -34,19 +35,25 @@ class ApiAiService implements AiService {
   }) async {
     final cfg = config ?? AiProviderConfig.defaultConfig;
 
-    switch (cfg.providerType) {
-      case AiProviderType.openai:
-        return _openaiChat(messages, cfg);
-      case AiProviderType.anthropic:
-        return _anthropicChat(messages, cfg);
-      case AiProviderType.deepseek:
-        return _deepseekChat(messages, cfg);
-      case AiProviderType.gemini:
-        return _geminiChat(messages, cfg);
-      case AiProviderType.custom:
-        return _customChat(messages, cfg);
-      case AiProviderType.onDevice:
-        throw Exception('API 모드가 아닙니다. OnDeviceAiService를 사용하세요.');
+    // 🛡️ Rate limiter — absolute safety net
+    if (!RateLimiter().canCall()) {
+      return '잠시 쉬고 있어요. 곧 다시 응답할게요.';
+    }
+
+    try {
+      final result = switch (cfg.providerType) {
+        AiProviderType.openai => await _openaiChat(messages, cfg),
+        AiProviderType.anthropic => await _anthropicChat(messages, cfg),
+        AiProviderType.deepseek => await _deepseekChat(messages, cfg),
+        AiProviderType.gemini => await _geminiChat(messages, cfg),
+        AiProviderType.custom => await _customChat(messages, cfg),
+        AiProviderType.onDevice => throw Exception('On-device mode'),
+      };
+      RateLimiter().onSuccess();
+      return result;
+    } catch (e) {
+      RateLimiter().onError();
+      rethrow;
     }
   }
 
