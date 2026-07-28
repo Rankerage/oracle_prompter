@@ -1,8 +1,13 @@
 import '../widgets/conversation_card.dart';
 
-/// 🎴 Endless card content generator
+/// 🎴 Card Content Generator — Stress-Free Design
 ///
-/// Sources: news headlines, English sentences, IT terms, slang, user context
+/// Strict rules:
+/// 1. Statement MUST be easy to understand (≤10 words Korean)
+/// 2. Back MUST resolve all doubt — never leave user wondering
+/// 3. Back SHOULD nudge toward ○ by explaining the benefit
+/// 4. Never use question words (뭐, 왜, 어떻게, 언제, 어디, 누가)
+/// 5. If user picks ✕, back still provides value
 class CardContentGenerator {
   static final CardContentGenerator _i = CardContentGenerator._();
   factory CardContentGenerator() => _i;
@@ -79,7 +84,7 @@ class CardContentGenerator {
     return CardData(
       type: CardType.learning,
       statement: '이 소리, 들리세요?',
-      backAnswer: '${e.english}\n\n${e.korean}',
+      backAnswer: '${e.english}\n\n${e.korean}\n\n하루 한 문장씩 들으면 영어가 편해져요.',
       positiveLabel: '들려',
       negativeLabel: '안들려',
     );
@@ -89,8 +94,8 @@ class CardContentGenerator {
     final t = nextTerm();
     return CardData(
       type: CardType.learning,
-      statement: '${t.term}이(가) 무슨 뜻인지 아세요?',
-      backAnswer: t.definition,
+      statement: '${t.term} 뜻을 아시나요?',
+      backAnswer: '${t.definition}\n\n알아두면 대화할 때 유용한 표현이에요.',
       positiveLabel: '안다',
       negativeLabel: '모른다',
     );
@@ -99,8 +104,8 @@ class CardContentGenerator {
   static CardData _newsCard() {
     return CardData(
       type: CardType.news,
-      statement: nextNews(),
-      backAnswer: 'AI 기술은 매일 발전하고 있어요. O.P도 함께 성장합니다.',
+      statement: '오늘 AI 소식 하나 가져왔어요.',
+      backAnswer: '새로운 기술은 매일 나오고 있어요. O.P도 계속 배우는 중입니다.\n\n궁금한 게 있으면 언제든 물어봐 주세요.',
       positiveLabel: '알겠다',
       negativeLabel: '나중에',
     );
