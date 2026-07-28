@@ -1,9 +1,10 @@
-# OraclePrompter Alpha
+# OraclePrompter Alpha — NoStressAI
 
 > **"귓속말로 모든 것을 도와줍니다."**
 >
-> Your personal AI companion — whisper coach, memory keeper, learning partner.  
-> Not a developer tool. Not a coding agent. Just there, in your ear, for everything that matters.
+> No commands. No syntax. No learning curve. No stress.  
+> Just cards. Tap ○ or ✕. That's it.  
+> The world's first **NoStressAI** companion.
 
 <p align="center">
   <img src="https://img.shields.io/badge/Platform-Android-brightgreen" alt="Android">
