@@ -13,7 +13,8 @@ enum CardType { preference, reminder, learning, news, checkup, askMe }
 class ConversationCard extends StatefulWidget {
   final CardType type;
   final String statement, backAnswer, positiveLabel, negativeLabel;
-  final String? backImageUrl;
+  final String? imageUrl;       // optional image for both sides
+  final String? backImageUrl;   // different image for back (optional)
   final Color? accentColor;
   final bool speakAloud;
   final void Function(int confidence)? onResult;
@@ -90,8 +91,12 @@ class _ConversationCardState extends State<ConversationCard>
   Widget _front(Color color) => _card(
     Column(mainAxisSize: MainAxisSize.min, children: [
       _badge(color), const SizedBox(height: 14),
-      Text(widget.statement, textAlign: TextAlign.center,
-        style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500, height: 1.5)),
+      if (widget.imageUrl != null) ...[
+        ClipRRect(borderRadius: BorderRadius.circular(12),
+          child: Image.network(widget.imageUrl!, height: 140, fit: BoxFit.cover)),
+        const SizedBox(height: 12),
+      ],
+      _buildRichText(widget.statement),
       const SizedBox(height: 6),
       Text('← ${widget.negativeLabel}  |  ${widget.positiveLabel} →',
         style: TextStyle(color: Colors.grey.shade700, fontSize: 10)),
