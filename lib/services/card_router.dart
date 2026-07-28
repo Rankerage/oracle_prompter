@@ -74,7 +74,7 @@ class CardRouter {
   void suggestSwitch(BuildContext ctx, String from, String to, VoidCallback onSwitch) {
     ask(ctx,
       type: CardType.preference,
-      statement: '$from보다 $to 방식이 더 나을 것 같아요. 바꿔볼까요?',
+      statement: '$from보다 $to 방식이 더 나을 것 같아요.',
       back: '변경되었습니다. 언제든 되돌릴 수 있어요.',
       pos: '바꾸기', neg: '유지',
       onResult: (c) { if (c >= 1) onSwitch(); },

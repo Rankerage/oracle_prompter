@@ -126,6 +126,6 @@ class RecordingPolicy {
   static const bool cameraDefault = false;
 
   /// Card message for camera permission
-  static const cameraCardStatement = '시선 모드를 켜볼까요? 카메라로 함께 보면서 코칭해드려요.';
+  static const cameraCardStatement = '시선 모드를 켜는 게 좋겠어요. 카메라로 함께 보면서 코칭해드려요.';
   static const cameraCardBack = '카메라를 켜면 AI가 당신과 같은 화면을 보고 도와드립니다. 언제든 끌 수 있어요.';
 }

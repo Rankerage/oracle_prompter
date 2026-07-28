@@ -55,7 +55,7 @@ class CardQueueService {
   // ─── External triggers ─────────────────────────
 
   void showApiBalanceLow() => _show(CardType.preference,
-      'API 잔액이 부족해요. 무료 온디바이스로 전환할까요?',
+      'API 잔액이 부족해요. 무료 온디바이스 전환을 추천드려요.',
       '온디바이스 AI는 인터넷 없이 작동해요.', '전환', '충전');
 
   void showMoodCheck() => _show(CardType.checkup,

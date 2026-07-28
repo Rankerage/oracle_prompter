@@ -77,27 +77,27 @@ class CardOptimizer {
 
   void initDefaults() {
     register('coaching_frequency', '코칭 빈도', 3.0, 1.0, 10.0, 1.0,
-      cardStatement: '코칭을 조금 더 자주 해드려도 될까요?',
+      cardStatement: '코칭을 조금 더 자주 해드리는 게 좋겠어요.',
       backTemplate: '지금은 대화 {current}회마다 코칭해드려요.\n더 자주 필요하시면 ○를 눌러주세요.');
 
     register('coaching_detail', '코칭 상세도', 2.0, 1.0, 5.0, 1.0,
-      cardStatement: '코칭 내용을 좀 더 자세히 설명해드릴까요?',
+      cardStatement: '코칭 내용을 좀 더 자세히 설명해드리는 게 좋겠어요.',
       backTemplate: '지금은 핵심만 간단히 알려드리고 있어요.\n더 자세히 설명해드릴까요?');
 
     register('voice_speed', '음성 속도', 2.0, 1.0, 5.0, 1.0,
-      cardStatement: '목소리 속도를 조금 더 빠르게 할까요?',
+      cardStatement: '목소리 속도를 조금 더 빠르게 말씀드리는 게 좋겠어요.',
       backTemplate: '지금 속도면 편하게 들리실 거예요.\n더 빠르게 원하시면 ○를 눌러주세요.');
 
     register('card_frequency', '카드 빈도', 3.0, 1.0, 8.0, 1.0,
-      cardStatement: '이런 카드를 조금 더 자주 보여드려도 될까요?',
+      cardStatement: '이런 카드를 조금 더 자주 보여드리는 게 좋겠어요.',
       backTemplate: '너무 자주 물어보면 피곤하실 수 있어요.\n더 자주 원하시면 ○를 눌러주세요.');
 
     register('vision_interval', '화면 분석 간격', 4.0, 2.0, 15.0, 1.0,
-      cardStatement: '화면 분석 간격을 넓혀도 될까요?',
+      cardStatement: '화면 분석 간격을 넓히면 배터리를 아낄 수 있어요.',
       backTemplate: '더 자주 분석하면 배터리를 더 써요.\n배터리를 아끼려면 ○를 눌러주세요.');
 
     register('graph_detail', '그래프 상세도', 3.0, 1.0, 5.0, 1.0,
-      cardStatement: '마인드 그래프를 좀 더 자세히 보여드릴까요?',
+      cardStatement: '마인드 그래프를 좀 더 자세히 보여드리는 게 좋겠어요.',
       backTemplate: '노드가 많으면 복잡해 보일 수 있어요.\n더 자세히 보시려면 ○를 눌러주세요.');
   }
 
