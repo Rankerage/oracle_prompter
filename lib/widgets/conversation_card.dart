@@ -44,28 +44,22 @@ class _ConversationCardState extends State<ConversationCard>
   @override
   void initState() {
     super.initState();
-    _flip = AnimationController(duration: const Duration(milliseconds: 450), vsync: this);
-    _flipAnim = Tween<double>(begin: 0, end: 1).animate(CurvedAnimation(parent: _flip, curve: Curves.easeInOut));
+    _flip = AnimationController(duration: const Duration(milliseconds: 550), vsync: this);
+    _flipAnim = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _flip, curve: Curves.easeOutBack)); // spring bounce
   }
 
   void _tap(bool accepted) {
-    HapticFeedback.selectionClick();
-    SystemSound.play(SystemSoundType.click); // "톡!"
+    HapticFeedback.lightImpact();
     if (!_flipped) {
       _first = accepted ? 1 : 0;
       _flip.forward(); setState(() => _flipped = true);
-      SystemSound.play(SystemSoundType.click); // flip sound
+      SystemSound.play(SystemSoundType.click); // "톡!" flip sound
     } else {
       _second = accepted ? 1 : 0;
+      SystemSound.play(SystemSoundType.alert); // "탁!" next card sound
       final c = _first == 1 && _second == 1 ? 2 : (_first == 0 && _second == 1 ? 1 : (_first == 1 && _second == 0 ? -1 : -2));
       widget.onResult?.call(c);
-
-      // Type B: double confirm always executes on 2nd tap
-      // Type C: tutorial always shows explanation, then dismisses
-      // Type A: simple dismiss
-      if (widget.flow == CardFlow.doubleConfirm && accepted) {
-        // Execute action, keep card briefly then dismiss
-      }
       widget.onDismiss?.call();
       Future.delayed(const Duration(milliseconds: 600), () {
         if (mounted) Navigator.of(context).pop();
@@ -138,9 +132,22 @@ class _ConversationCardState extends State<ConversationCard>
   Widget _card(Widget child) => Container(
     width: 320, padding: const EdgeInsets.all(24),
     decoration: BoxDecoration(
-      gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF1A1A1A), Color(0xFF0D0D0D)]),
-      borderRadius: BorderRadius.circular(22),
-      border: Border.all(color: (_flipped ? Colors.white : widget.accentColor ?? _typeColor()).withAlpha(60)),
+      gradient: const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFF1E1E1E), Color(0xFF141414), Color(0xFF0D0D0D)],
+        stops: [0.0, 0.5, 1.0],
+      ),
+      borderRadius: BorderRadius.circular(24),
+      border: Border.all(
+        color: _flipped
+            ? Colors.white.withAlpha(20)
+            : (widget.accentColor ?? _typeColor()).withAlpha(50),
+      ),
+      boxShadow: [
+        BoxShadow(color: Colors.black.withAlpha(180), blurRadius: 30, offset: const Offset(0, 12)),
+        BoxShadow(color: (widget.accentColor ?? _typeColor()).withAlpha(15), blurRadius: 60, offset: const Offset(0, 8)),
+      ],
     ),
     child: child,
   );
