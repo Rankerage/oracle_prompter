@@ -1,7 +1,8 @@
-# 톡톡 (TokTok) — NoStressAI
+# TikiTaka — NoStressAI
 
-> **"AI가 먼저 톡톡."**
+> **"AI가 먼저 톡. 당신은 그냥 탭."**
 >
+> AI and you, exchanging short passes like tiki-taka football.  
 > No commands. No syntax. No stress.  
 > AI talks first. You just tap ○ or ✕.  
 > The world's first **NoStressAI** companion.
