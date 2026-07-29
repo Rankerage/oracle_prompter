@@ -1,79 +1,69 @@
-import 'dart:math';
 import 'fsrs_bridge.dart';
-import 'interest_engine.dart';
 
-/// 🎯 Next Card Engine — decides what card comes next
+/// 🎯 Next Card Engine with Content Switching
 ///
-/// Mixes learning cards + engagement cards at the right ratio.
-/// Triangle state manages who's asking.
+/// AI can switch subjects mid-session. User can too.
+/// Balance: 70% current subject, 30% variety (humor, news, check-in).
+/// Every 10 cards, ask: "계속할까요? 다른 걸로 넘어갈까요?"
 class NextCardEngine {
   static final NextCardEngine _i = NextCardEngine._();
   factory NextCardEngine() => _i;
   NextCardEngine._();
 
-  final _rng = Random();
+  final _rng = DateTime.now().millisecondsSinceEpoch;
+  String? _currentSubject;
+  int _cardsInSubject = 0;
+  int _totalCards = 0;
 
-  // ─── Triangle state ────────────────────────────
+  // ─── Content switching ─────────────────────────
 
-  bool _isUserTurn = false; // ▲=user asking, ▼=AI asking
-  int _aiCardsSinceUserTurn = 0;
-  static const _maxAiCardsBeforeNudge = 15;
+  /// AI decides next card type and subject
+  ({CardSource source, String? subject}) nextCard({
+    String? activeSubject,
+    FSRSBridge? fsrs,
+    bool userWantsSwitch = false,
+  }) {
+    _totalCards++;
 
-  bool get isUserTurn => _isUserTurn;
-  bool get isAiTurn => !_isUserTurn;
+    // User explicitly asked for switch
+    if (userWantsSwitch && activeSubject != null) {
+      final variety = _varietyPick();
+      _cardsInSubject = 0;
+      return (source: variety.$1, subject: variety.$2);
+    }
 
-  /// User pressed triangle → toggle
-  void toggleTurn() {
-    _isUserTurn = !_isUserTurn;
-    _aiCardsSinceUserTurn = 0;
-  }
+    // AI-initiated switch: every ~10 cards, offer variety
+    if (_totalCards % 10 == 0 && _totalCards > 0) {
+      final variety = _varietyPick();
+      return (source: CardSource.nudge, subject: '${activeSubject ?? ""} 계속?');
+    }
 
-  /// AI answers user's question → auto-switch back
-  void onUserQuestionAnswered() {
-    _isUserTurn = false;
-    _aiCardsSinceUserTurn = 0;
-  }
-
-  /// After many AI cards, nudge: "질문 있으세요?"
-  bool get shouldNudgeUserToAsk =>
-      !_isUserTurn && _aiCardsSinceUserTurn >= _maxAiCardsBeforeNudge;
-
-  // ─── Card priority queue ────────────────────────
-
-  CardPriority nextCard({String? activeSubject, FSRSBridge? fsrs}) {
-    // 1. FSRS due cards (urgent review) — 60% chance
-    if (fsrs != null && fsrs.dueCount > 0 && _rng.nextDouble() < 0.6) {
-      final due = fsrs.dueCards;
-      if (due.isNotEmpty) {
-        _aiCardsSinceUserTurn++;
-        return CardPriority(type: CardSource.fsrsReview, data: due.first, priority: 10);
+    // 70% stay on current subject
+    if (activeSubject != null && _rng % 100 < 70) {
+      _cardsInSubject++;
+      _currentSubject = activeSubject;
+      // FSRS priority within subject
+      if (fsrs != null && fsrs.dueCount > 0) {
+        return (source: CardSource.fsrsReview, subject: activeSubject);
       }
+      return (source: CardSource.learning, subject: activeSubject);
     }
 
-    // 2. Active subject learning — 20% chance
-    if (activeSubject != null && _rng.nextDouble() < 0.2) {
-      _aiCardsSinceUserTurn++;
-      return CardPriority(type: CardSource.learning, data: activeSubject, priority: 7);
-    }
-
-    // 3. Interest/engagement card — 15% chance
-    final interest = InterestEngine();
-    final interestCard = interest.getProfileCard() ?? interest.humorCard;
-    if (interestCard != null && _rng.nextDouble() < 0.15) {
-      _aiCardsSinceUserTurn++;
-      return CardPriority(type: CardSource.engagement, data: interestCard, priority: 5);
-    }
-
-    // 4. Nudge user to ask (if too many AI cards)
-    if (shouldNudgeUserToAsk) {
-      return CardPriority(type: CardSource.nudge, data: '질문 있으세요?', priority: 3);
-    }
-
-    // 5. Default: new learning card
-    _aiCardsSinceUserTurn++;
-    return CardPriority(type: CardSource.general, data: '새로운 카드', priority: 1);
+    // 30% variety
+    _currentSubject = null;
+    return _varietyPick();
   }
-}
+
+  (CardSource, String?) _varietyPick() {
+    final options = [
+      (CardSource.engagement, (null as String?)),
+      (CardSource.engagement, null),
+      (CardSource.general, '뉴스'),
+      (CardSource.general, '상식'),
+    ];
+    final pick = options[_rng % options.length];
+    return pick;
+  }
 
 enum CardSource { fsrsReview, learning, engagement, nudge, general }
 
