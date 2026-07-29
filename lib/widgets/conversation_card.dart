@@ -5,7 +5,13 @@ import 'command_mode.dart';
 import 'ask_me_card.dart';
 import 'learning_mode.dart';
 
-enum CardType { preference, reminder, learning, news, checkup, askMe }
+enum CardType { preference, reminder, learning, news, checkup, askMe, content }
+
+/// Card modes
+enum CardMode {
+  normal,   // "아세요?" + 질문 텍스트
+  content,  // 순수 콘텐츠만. 질문 텍스트 없음. 앞면=apple, 뒷면=사과
+}
 
 /// 🃏 Conversation Card — 3-button: [✕] [▲] [○]
 ///
@@ -17,7 +23,8 @@ class ConversationCard extends StatefulWidget {
   final Color? accentColor;
   final bool speakAloud;
   final CardFlow flow;         // card flow type
-  final bool isUserTurn;       // triangle state
+  final CardMode mode;         // normal or pure content
+  final bool isUserTurn;
   final void Function(int confidence)? onResult;
   final VoidCallback? onDismiss;
 
@@ -26,7 +33,8 @@ class ConversationCard extends StatefulWidget {
     required this.backAnswer, this.positiveLabel = '네',
     this.negativeLabel = '아니오', this.accentColor,
     this.speakAloud = true, this.onResult,
-    this.flow = CardFlow.simple, this.isUserTurn = false,
+    this.flow = CardFlow.simple, this.mode = CardMode.normal,
+    this.isUserTurn = false,
     this.imageUrl, this.backImageUrl, this.onDismiss,
   });
 
@@ -99,16 +107,25 @@ class _ConversationCardState extends State<ConversationCard>
 
   Widget _front(Color color) => _card(
     Column(mainAxisSize: MainAxisSize.min, children: [
-      _badge(color), const SizedBox(height: 14),
+      if (widget.mode != CardMode.content) ...[
+        _badge(color), const SizedBox(height: 14),
+      ],
       if (widget.imageUrl != null) ...[
         ClipRRect(borderRadius: BorderRadius.circular(12),
           child: Image.network(widget.imageUrl!, height: 140, fit: BoxFit.cover)),
         const SizedBox(height: 12),
       ],
-      _buildRichText(widget.statement),
-      const SizedBox(height: 6),
-      Text('← ${widget.negativeLabel}  |  ${widget.positiveLabel} →',
-        style: TextStyle(color: Colors.grey.shade700, fontSize: 10)),
+      Text(widget.statement, textAlign: TextAlign.center,
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: widget.mode == CardMode.content ? 32 : 16,
+          fontWeight: widget.mode == CardMode.content ? FontWeight.w700 : FontWeight.w500,
+          height: 1.5)),
+      if (widget.mode != CardMode.content) ...[
+        const SizedBox(height: 6),
+        Text('← ${widget.negativeLabel}  |  ${widget.positiveLabel} →',
+          style: TextStyle(color: Colors.grey.shade700, fontSize: 10)),
+      ],
       const SizedBox(height: 18),
       _threeBtn(color),
     ]),
@@ -121,9 +138,16 @@ class _ConversationCardState extends State<ConversationCard>
           child: Image.network(widget.backImageUrl!, height: 160, fit: BoxFit.cover)),
         const SizedBox(height: 12),
       ],
-      _buildRichText(widget.backAnswer),
-      const SizedBox(height: 6),
-      Text('한 번 더 눌러주세요', style: TextStyle(color: Colors.grey.shade500, fontSize: 11)),
+      Text(widget.backAnswer, textAlign: TextAlign.center,
+        style: TextStyle(
+          color: Colors.white70,
+          fontSize: widget.mode == CardMode.content ? 32 : 14,
+          fontWeight: widget.mode == CardMode.content ? FontWeight.w700 : FontWeight.w400,
+          height: 1.5)),
+      if (widget.mode != CardMode.content) ...[
+        const SizedBox(height: 6),
+        Text('한 번 더 눌러주세요', style: TextStyle(color: Colors.grey.shade500, fontSize: 11)),
+      ],
       const SizedBox(height: 16),
       _threeBtn(color),
     ]),
@@ -219,6 +243,7 @@ class _ConversationCardState extends State<ConversationCard>
       CardType.preference => Icons.tune, CardType.reminder => Icons.alarm,
       CardType.learning => Icons.school, CardType.news => Icons.newspaper,
       CardType.checkup => Icons.favorite, CardType.askMe => Icons.chat,
+    CardType.content => Icons.style,
     };
     return Row(mainAxisSize: MainAxisSize.min, children: [Icon(icon, size: 13, color: color)]);
   }
@@ -227,6 +252,7 @@ class _ConversationCardState extends State<ConversationCard>
     CardType.preference => const Color(0xFFD4A574), CardType.reminder => const Color(0xFF6AC9D4),
     CardType.learning => const Color(0xFFB088D4), CardType.news => const Color(0xFF7CCE8C),
     CardType.checkup => const Color(0xFFE8847C), CardType.askMe => const Color(0xFFB088D4),
+    CardType.content => const Color(0xFF888888),
   };
 
   @override
