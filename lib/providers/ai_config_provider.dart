@@ -8,11 +8,11 @@ class AiConfigProvider extends ChangeNotifier {
   AiService? _service;
   bool _isLoading = false;
 
-  // O.P built-in key — no user setup needed
-  static const _builtInDeepSeekKey = 'OP_DEEPSEEK_KEY';
+  // O.P built-in proxy — no user setup needed
+  static const _proxyUrl = 'https://tikitaka-proxy.rankerage.workers.dev/chat';
 
   AiConfigProvider() {
-    // Start with built-in key. User never sees "API" word.
+    // Start with built-in proxy. User never sees "API" word.
     _switchToProvider(AiProviderType.deepseek);
   }
 
