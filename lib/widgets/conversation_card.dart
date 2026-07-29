@@ -2,11 +2,12 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'command_mode.dart';
-import 'ask_me_card.dart';
 import 'subject_picker.dart';
-import 'learning_mode.dart';
 
 enum CardType { preference, reminder, learning, news, checkup, askMe, content }
+
+/// Card flow types
+enum CardFlow { simple, doubleConfirm, tutorial }
 
 /// Card modes
 enum CardMode {
@@ -74,7 +75,6 @@ class _ConversationCardState extends State<ConversationCard>
         if (mounted) Navigator.of(context).pop();
       });
     }
-  }
   }
 
   void _openCommand() {

@@ -12,8 +12,13 @@ class AiConfigProvider extends ChangeNotifier {
   static const _proxyUrl = 'https://tikitaka-proxy.rankerage.workers.dev/chat';
 
   AiConfigProvider() {
-    // Start with built-in proxy. User never sees "API" word.
-    _switchToProvider(AiProviderType.deepseek);
+    // Start with DeepSeek via proxy. User never sees "API" word.
+    _config = AiProviderConfig(
+      providerType: AiProviderType.deepseek,
+      apiKey: '',
+      apiModel: 'deepseek-chat',
+    );
+    _service = AiServiceFactory.create(_config);
   }
 
   AiProviderConfig get config => _config;
