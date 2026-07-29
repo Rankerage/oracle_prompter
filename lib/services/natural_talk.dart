@@ -68,24 +68,10 @@ class NaturalTalk {
   }
 
   // ─── Response tone (card back) ──────────────────
+  // Rule: no fake encouragement. No patronizing.
+  // Just the facts. Just the next card.
 
-  static const affirmations = [
-    '잘하셨어요. 다음 것도 보여드릴게요.',
-    '기억하고 계셨군요. 천천히 가도 괜찮아요.',
-    '맞추셨어요. 부담 없이 다음 걸로 넘어갈게요.',
-    '잘 아시네요. 더 알려드릴까요?',
-  ];
-
-  static const encouragements = [
-    '괜찮아요. 다시 보면 기억나실 거예요.',
-    '처음 보는 건 당연히 어려워요. 곧 익숙해져요.',
-    '틀려도 전혀 문제없어요. 계속 가볼게요.',
-    '다음에 또 보면 더 잘 아실 거예요.',
-  ];
-
-  static String back(bool correct) => correct
-      ? affirmations[_i._rng % affirmations.length]
-      : encouragements[_i._rng % encouragements.length];
+  static String back(bool correct) => ''; // Nothing. The answer speaks for itself.
 
   // ─── Time-sensitive openers ─────────────────────
 
