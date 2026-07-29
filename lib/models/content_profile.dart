@@ -23,10 +23,22 @@ enum ContentProfile {
   /// Type 3: Audio-first. 앞면=소리만, 뒷면=소리+텍스트
   audio(
     mode: CardMode.content,
-    showFrontText: false, // "소리만 들으세요" 안내만 표시
+    showFrontText: false,
     showBackText: true,
     playAudio: true,
     description: '영어듣기, 음악, 발음 훈련',
+  ),
+
+  /// Type 4: Connection. 앞면=던지기, 뒷면=즉흥 교감
+  /// 유머, 잡담, 감정 체크, 작은 농담.
+  /// 앞면은 정해져 있지만 뒷면은 AI가 그때그때 만든다.
+  /// 학습 목적이 아니라 관계 목적.
+  connection(
+    mode: CardMode.normal,   // 질문 텍스트 있음 ("들어보실래요?")
+    showFrontText: true,
+    showBackText: true,
+    playAudio: false,
+    description: '유머, 잡담, 감정 체크, 아이스브레이킹',
   );
 
   final CardMode mode;
