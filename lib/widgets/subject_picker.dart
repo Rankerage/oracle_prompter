@@ -8,8 +8,8 @@ import '../models/content_profile.dart';
 class SubjectPicker {
   static const _suggestions = ['영어', '영어듣기', '수학', '신조어', 'IT 용어', '상식', '유머', '뉴스'];
 
-  /// Blocked subjects
-  static const _blocked = ['음담패설', '19금', '성인', '도박', '마약', '폭력'];
+  /// Blocked subjects (violence, illegal)
+  static const _blocked = ['도박', '마약', '폭력', '불법'];
 
   static void show(BuildContext ctx, void Function(String subject, ContentProfile profile) onPicked) {
     final allChoices = [..._suggestions, '직접 입력...'];
