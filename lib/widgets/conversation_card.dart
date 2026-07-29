@@ -13,17 +13,21 @@ enum CardType { preference, reminder, learning, news, checkup, askMe }
 class ConversationCard extends StatefulWidget {
   final CardType type;
   final String statement, backAnswer, positiveLabel, negativeLabel;
-  final String? imageUrl;       // optional image for both sides
-  final String? backImageUrl;   // different image for back (optional)
+  final String? imageUrl, backImageUrl;
   final Color? accentColor;
   final bool speakAloud;
+  final CardFlow flow;         // card flow type
+  final bool isUserTurn;       // triangle state
   final void Function(int confidence)? onResult;
+  final VoidCallback? onDismiss;
 
   const ConversationCard({
     super.key, required this.type, required this.statement,
     required this.backAnswer, this.positiveLabel = '네',
     this.negativeLabel = '아니오', this.accentColor,
     this.speakAloud = true, this.onResult,
+    this.flow = CardFlow.simple, this.isUserTurn = false,
+    this.imageUrl, this.backImageUrl, this.onDismiss,
   });
 
   @override
@@ -46,17 +50,28 @@ class _ConversationCardState extends State<ConversationCard>
 
   void _tap(bool accepted) {
     HapticFeedback.selectionClick();
-    // 🔊 Tok sound on flip
-    SystemSound.play(SystemSoundType.click);
+    SystemSound.play(SystemSoundType.click); // "톡!"
     if (!_flipped) {
       _first = accepted ? 1 : 0;
       _flip.forward(); setState(() => _flipped = true);
+      SystemSound.play(SystemSoundType.click); // flip sound
     } else {
       _second = accepted ? 1 : 0;
       final c = _first == 1 && _second == 1 ? 2 : (_first == 0 && _second == 1 ? 1 : (_first == 1 && _second == 0 ? -1 : -2));
       widget.onResult?.call(c);
-      Future.delayed(const Duration(milliseconds: 600), () { if (mounted) Navigator.of(context).pop(); });
+
+      // Type B: double confirm always executes on 2nd tap
+      // Type C: tutorial always shows explanation, then dismisses
+      // Type A: simple dismiss
+      if (widget.flow == CardFlow.doubleConfirm && accepted) {
+        // Execute action, keep card briefly then dismiss
+      }
+      widget.onDismiss?.call();
+      Future.delayed(const Duration(milliseconds: 600), () {
+        if (mounted) Navigator.of(context).pop();
+      });
     }
+  }
   }
 
   void _openCommand() {
@@ -147,7 +162,8 @@ class _ConversationCardState extends State<ConversationCard>
   Widget _centerBtn(Color color) => GestureDetector(
     onTap: _openCommand,
     child: Container(width: 44, height: 44, decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withAlpha(8), border: Border.all(color: Colors.white.withAlpha(20))),
-      child: const Center(child: Text('▲', style: TextStyle(color: Color(0xFF888888), fontSize: 18)))),
+      child: Center(child: Text(widget.isUserTurn ? '▲' : '▼',
+          style: const TextStyle(color: Color(0xFF888888), fontSize: 18)))),
   );
 
   /// Rich text with LaTeX. $...$ = inline math, $$...$$ = block math
