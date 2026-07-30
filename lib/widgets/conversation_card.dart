@@ -124,7 +124,7 @@ class _ConversationCardState extends State<ConversationCard>
           height: 1.5)),
       if (widget.mode != CardMode.content) ...[
         const SizedBox(height: 6),
-        Text('← ${widget.negativeLabel}  |  ${widget.positiveLabel} →',
+        Text('← tiki  |  taka →',
           style: TextStyle(color: Colors.grey.shade700, fontSize: 10)),
       ],
       const SizedBox(height: 18),
