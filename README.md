@@ -74,7 +74,22 @@ Just cards. Tap "Yes" or "No". That's it.
 
 ---
 
-## 🧠 Core Features
+## 🧩 Plugin Architecture
+
+TikiTaka는 **플랫폼**입니다. OraclePrompter는 플러그인 중 하나입니다.
+
+```
+TikiTaka (플랫폼)
+  ├── 🃏 Card Engine (내장)
+  ├── 🧠 FSRS Bridge (내장)
+  ├── 🔌 Plugin Registry
+  │     ├── 🎧 OraclePrompter — 코칭·녹음·그래프
+  │     ├── 🔗 Agent Gateway — 외부 에이전트 연결
+  │     └── (미래 플러그인들...)
+  └── 📁 Markdown Vault (내장)
+```
+
+> **TikiTaka는 기본. 원하는 플러그인을 꽂아 확장.**
 
 ### 🎧 AI Whisper Coach
 ```
