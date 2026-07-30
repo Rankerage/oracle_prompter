@@ -1,18 +1,21 @@
-# TikiTaka — NoStressAI
+# OraclePrompter — Full Platform (Under Development)
 
-> **"AI가 먼저 톡. 당신은 그냥 탭."**
->
-> AI and you, exchanging short passes like tiki-taka football.  
-> No commands. No syntax. No stress.  
-> AI talks first. You just tap ○ or ✕.  
-> The world's first **NoStressAI** companion.
+> ⚠️ **이 저장소는 개발 중입니다.**  
+> 실제 사용 가능한 앱은 **[TikiTaka](https://github.com/Rankerage/tikitaka)** 에서 확인하세요.  
+> OraclePrompter는 전체 기능(코칭·녹음·마인드그래프)을 포함한 플랫폼입니다.
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Platform-Android-brightgreen" alt="Android">
-  <img src="https://img.shields.io/badge/License-MIT-blue" alt="MIT">
-  <img src="https://img.shields.io/badge/Status-Alpha-orange" alt="Alpha">
-  <img src="https://img.shields.io/badge/For-Everyone-9cf" alt="For Everyone">
-</p>
+---
+
+## 🔗 TikiTaka vs OraclePrompter
+
+| | TikiTaka | OraclePrompter |
+|---|---------|---------------|
+| 상태 | 🟢 사용 가능 | 🟡 개발 중 |
+| 대상 | 모든 사람 | 파워 유저 |
+| 기능 | 카드·학습·연결 | +코칭·녹음·그래프 |
+| 링크 | [github.com/Rankerage/tikitaka](https://github.com/Rankerage/tikitaka) | 현재 저장소 |
+
+> **TikiTaka는 간단한 카드 대화. OraclePrompter는 전체 AI 플랫폼입니다.**
 
 ---
 
