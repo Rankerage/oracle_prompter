@@ -41,10 +41,20 @@ class PhoneHelper {
   // ─── 카드 기반 요청 ────────────────────────────
 
   static void guide(BuildContext ctx, String request) {
-    if (request.contains('볼륨') && request.contains('올려')) {
-      _handleVolume(ctx, true);
-    } else if (request.contains('볼륨') && request.contains('내려')) {
-      _handleVolume(ctx, false);
+    if (request.contains('볼륨')) {
+      _handleVolume(ctx, request.contains('올려'));
+    } else if (request.contains('핫스팟') || request.contains('테더링')) {
+      _openAndGuide(ctx, 'hotspot', '핫스팟',
+        '설정 → 연결 → 모바일 핫스팟 및 테더링',
+        '화면에서 켜기만 누르시면 돼요.', '켰어요');
+    } else if (request.contains('와이파이') || request.contains('wifi')) {
+      _openAndGuide(ctx, 'wifi', 'Wi-Fi',
+        '설정 → 연결 → Wi-Fi',
+        '연결할 네트워크를 선택하세요.', '연결했어요');
+    } else if (request.contains('블루투스')) {
+      _openAndGuide(ctx, 'bluetooth', '블루투스',
+        '설정 → 연결 → 블루투스',
+        '화면에서 켜기만 누르시면 돼요.', '켰어요');
     } else if (request.contains('배터리')) {
       _guideBattery(ctx);
     } else if (request.contains('저장') || request.contains('용량')) {
@@ -52,6 +62,23 @@ class PhoneHelper {
     } else if (request.contains('알림')) {
       _guideNotifications(ctx);
     }
+  }
+
+  /// Open settings + guide to last step
+  static void _openAndGuide(BuildContext ctx, String setting, String label,
+      String path, String lastStep, String confirmLabel) {
+    showCard(ctx, type: CardType.preference,
+      statement: '$label을 켜드릴게요.',
+      backAnswer: '$path까지 이동했어요.\n\n$lastStep',
+      pos: confirmLabel, neg: '취소',
+      onResult: (c) async {
+        if (c >= 1) {
+          // Open settings page
+          try {
+            await _channel.invokeMethod('openSettings', {'setting': setting});
+          } catch (_) {}
+        }
+      });
   }
 
   static void _handleVolume(BuildContext ctx, bool up) {
