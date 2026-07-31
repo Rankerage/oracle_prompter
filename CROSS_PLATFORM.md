@@ -2,17 +2,23 @@
 
 Flutter = 하나의 Dart 코드로 모든 OS 지원.
 
-## 지원 플랫폼
+## 현재 집중 플랫폼
 
-| 플랫폼 | 명령어 | 상태 | 비고 |
-|--------|--------|:---:|------|
-| 📱 **Android** | `flutter build apk` | 🟢 진행 중 | Play Store 출시 예정 |
-| 🍎 **iOS** | `flutter build ios` | 🟡 준비 중 | Apple 계정 필요 ($99/년) |
-| 🖥️ **Windows** | `flutter build windows` | 🟢 빌드 가능 | 데스크톱 카드앱 |
-| 🍏 **macOS** | `flutter build macos` | 🟢 빌드 가능 | Mac 전용 |
-| 🐧 **Linux** | `flutter build linux` | 🟢 빌드 가능 | Termux/WSL/VPS |
-| 🌐 **Web** | `flutter build web` | 🟢 빌드 가능 | tikitaka.study |
-| 🇨🇳 **HarmonyOS** | `flutter build hap` | 🟢 Flutter 3.22+ 지원 | AppGallery (중국 시장) |
+| 플랫폼 | 상태 | 이유 |
+|--------|:---:|------|
+| 📱 **Android** | 🔥 주력 | 일반 사용자 100% |
+| 🖥️ **Windows** | 🟡 병행 | 당신이 쓰는 OS |
+| 나머지 | ⏸️ 보류 | Android 검증 후 |
+
+## 추후 확장
+
+| 플랫폼 | 명령어 | 시기 |
+|--------|--------|:---:|
+| 🍎 iOS | `flutter build ios` | Android 안정화 후 |
+| 🐧 Linux | `flutter build linux` | Termux/VPS 수요 확인 후 |
+| 🍏 macOS | `flutter build macos` | iOS와 동시 |
+| 🌐 Web | `flutter build web` | tikitaka.study 활성화 |
+| 🇨🇳 HarmonyOS | `flutter build hap` | 중국 시장 진출 시
 
 ## 장점
 
