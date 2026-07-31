@@ -12,11 +12,11 @@ class AiConfigProvider extends ChangeNotifier {
   static const _proxyUrl = 'https://tikitaka-proxy.rankerage.workers.dev/chat';
 
   AiConfigProvider() {
-    // Default: GPT-OSS 20B (free, reliable). DeepSeek no longer free.
+    // Default: GPT-OSS (fast) → Nemotron (smart) fallback chain
     _config = AiProviderConfig(
-      providerType: AiProviderType.deepseek, // API type
-      apiKey: '',       // Key in Worker, not here
-      apiModel: 'openai/gpt-oss-20b:free',  // Default free model
+      providerType: AiProviderType.deepseek,
+      apiKey: '',
+      apiModel: 'openai/gpt-oss-20b:free',  // 1st: fast
     );
     _service = AiServiceFactory.create(_config);
   }
