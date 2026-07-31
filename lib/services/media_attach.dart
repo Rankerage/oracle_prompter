@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:file_picker/file_picker.dart';
+// import 'package:image_picker/image_picker.dart'; // Windows: not available
+// import 'package:file_picker/file_picker.dart';    // Windows: not available
 import '../widgets/conversation_card.dart';
 
 /// 📎 Media Attach — ▲ 질문에 이미지·음성·파일 첨부
