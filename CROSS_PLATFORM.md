@@ -12,6 +12,7 @@ Flutter = 하나의 Dart 코드로 모든 OS 지원.
 | 🍏 **macOS** | `flutter build macos` | 🟢 빌드 가능 | Mac 전용 |
 | 🐧 **Linux** | `flutter build linux` | 🟢 빌드 가능 | Termux/WSL/VPS |
 | 🌐 **Web** | `flutter build web` | 🟢 빌드 가능 | tikitaka.study |
+| 🇨🇳 **HarmonyOS** | `flutter build hap` | 🟢 Flutter 3.22+ 지원 | AppGallery (중국 시장) |
 
 ## 장점
 
