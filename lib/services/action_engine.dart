@@ -32,20 +32,67 @@ class ActionEngine {
 
   /// 타이머 설정
   static Future<void> timer(int seconds) async {
+    final url = Uri.parse('intent:#Intent;action=android.intent.action.SET_TIMER;'
+        'S.android.intent.extra.alarm.LENGTH=$seconds;end');
     try {
-      await _channel.invokeMethod('setTimer', {'seconds': seconds});
+      await launchUrl(url);
     } catch (_) {
-      // Fallback: open clock app
-      await launchUrl(Uri.parse('intent://com.android.deskclock/#Intent;scheme=android-app;end'));
+      await _channel.invokeMethod('setTimer', {'seconds': seconds});
     }
   }
 
   /// 알람 설정
-  static Future<void> alarm(int hour, int minute) async {
+  static Future<void> alarm(int hour, int minute, String? label) async {
+    final msg = label ?? 'TikiTaka 알람';
+    final url = Uri.parse('intent:#Intent;action=android.intent.action.SET_ALARM;'
+        'S.android.intent.extra.alarm.HOUR=$hour;'
+        'i.android.intent.extra.alarm.MINUTES=$minute;'
+        'S.android.intent.extra.alarm.MESSAGE=$msg;end');
     try {
-      await _channel.invokeMethod('setAlarm', {'hour': hour, 'minute': minute});
+      await launchUrl(url);
     } catch (_) {
-      await launchUrl(Uri.parse('intent://com.android.deskclock/#Intent;scheme=android-app;end'));
+      await _channel.invokeMethod('setAlarm', {'hour': hour, 'minute': minute});
+    }
+  }
+
+  /// 🔔 리마인더 — Google Tasks/Keep 연동
+  static Future<void> reminder(String title, {String? note, int? hour, int? minute}) async {
+    // Try Google Tasks intent
+    final url = Uri.parse('intent:#Intent;action=android.intent.action.INSERT;'
+        'S.title=$title;'
+        'S.notes=${note ?? ''};end');
+    try {
+      await launchUrl(url);
+    } catch (_) {
+      await copyToClipboard('리마인더: $title');
+    }
+  }
+
+  /// 📅 캘린더 일정 추가
+  static Future<void> calendarEvent(String title, {String? location, int? hour, int? minute}) async {
+    final now = DateTime.now();
+    final start = DateTime(now.year, now.month, now.day, hour ?? 12, minute ?? 0)
+        .millisecondsSinceEpoch;
+    final url = Uri.parse('intent:#Intent;action=android.intent.action.INSERT;'
+        'v.android.intent.extra.EVENT_BEGIN_TIME=$start;'
+        'S.title=$title;'
+        'S.eventLocation=${location ?? ''};end');
+    try {
+      await launchUrl(url);
+    } catch (_) {
+      await copyToClipboard('일정: $title');
+    }
+  }
+
+  /// 🎵 음악 검색/재생
+  static Future<void> music(String query) async {
+    final url = Uri.parse('intent:#Intent;action=android.media.action.MEDIA_PLAY_FROM_SEARCH;'
+        'S.query=$query;end');
+    try {
+      await launchUrl(url);
+    } catch (_) {
+      // Fallback: YouTube
+      await youtube(query);
     }
   }
 
@@ -103,7 +150,7 @@ class ActionEngine {
     if (r.contains('타이머') || r.contains('몇 분')) {
       final mins = RegExp(r'(\d+)\s*분').firstMatch(request);
       final secs = mins != null ? int.parse(mins.group(1)!) * 60 : 300;
-      return _confirm(ctx, '${secs ~/ 60}분 타이머', '설정했어요.', () => timer(secs));
+      return _confirm(ctx, '${secs ~/ 60}분 타이머', '타이머가 설정됐어요.', () => timer(secs));
     }
 
     // Alarm
@@ -112,8 +159,26 @@ class ActionEngine {
       if (time != null) {
         final h = int.parse(time.group(1)!);
         final m = int.tryParse(time.group(2) ?? '0') ?? 0;
-        return _confirm(ctx, '$h시 ${m}분 알람', '설정했어요.', () => alarm(h, m));
+        return _confirm(ctx, '$h시 ${m}분 알람', '알람이 설정됐어요.', () => alarm(h, m, 'TikiTaka 알람'));
       }
+    }
+
+    // Reminder
+    if (r.contains('리마인더') || r.contains('알려줘') && r.contains('나중에')) {
+      final content = request.replaceAll(RegExp(r'리마인더|알려줘|나중에'), '').trim();
+      return _confirm(ctx, '리마인더 등록', '등록했어요.', () => reminder(content));
+    }
+
+    // Calendar
+    if (r.contains('일정') || r.contains('캘린더') || r.contains('약속')) {
+      final content = request.replaceAll(RegExp(r'일정|캘린더|약속|추가|등록'), '').trim();
+      return _confirm(ctx, '일정 추가', '캘린더에 추가했어요.', () => calendarEvent(content));
+    }
+
+    // Music
+    if (r.contains('음악') || r.contains('노래') || r.contains('틀어줘')) {
+      final query = request.replaceAll(RegExp(r'음악|노래|틀어줘|들려줘'), '').trim();
+      return _confirm(ctx, '음악 검색', '$query 찾을게요.', () => music(query));
     }
 
     // Note
