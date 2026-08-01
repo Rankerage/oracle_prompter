@@ -104,7 +104,7 @@ class SlashCommands {
         showCard(ctx, type: CardType.preference,
           statement: 'AI 모델을 변경하시겠어요?',
           backAnswer: '기본: 무료 모델 (TikiTaka 부담)\n'
-              '고급: 월 $3 (더 나은 성능)\n\n'
+              '고급: 월 \$3 (더 나은 성능)\n\n'
               '현재는 기본 모델만 지원해요.',
           pos: '○', neg: '✕');
         return '모델 정보를 보여드렸어요.';
