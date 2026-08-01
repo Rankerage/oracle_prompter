@@ -33,6 +33,8 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
   int _count = 0, _streak = 0;
   bool _flipped = false;
   Timer? _autoTimer;
+  final List<_CardHistory> _history = []; // 스와이프용 히스토리
+  int _historyIdx = -1;                   // 현재 보고 있는 히스토리 위치
 
   // Smart timer
   int _idleCount = 0;
@@ -72,6 +74,12 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
   void _next() {
     final deck = _decks[_deck]!;
     final i = _rng.nextInt(deck.length);
+    // Save current to history before moving on
+    if (_front.isNotEmpty) {
+      _history.add(_CardHistory(front: _front, back: _back, deck: _deck, flipped: _flipped));
+      if (_history.length > 50) _history.removeAt(0);
+    }
+    _historyIdx = -1; // not viewing history
     _flipped = false;
     _front = deck[i].$1; _back = deck[i].$2;
     if (_ctrl.isCompleted) _ctrl.reverse();
@@ -95,6 +103,19 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
   }
 
   void _switchDeck(String name) { _deck = name; _count = 0; _streak = 0; _next(); _resetTimer(); }
+  void _goBack() {
+    if (_history.isEmpty) return;
+    _autoTimer?.cancel();
+    final prev = _history.removeLast();
+    _historyIdx = _history.length;
+    _flipped = prev.flipped;
+    _front = prev.front; _back = prev.back;
+    _deck = prev.deck;
+    if (_flipped) _ctrl.forward(); else _ctrl.reverse();
+    setState(() {});
+    _resetTimer();
+  }
+
   @override void dispose() { _autoTimer?.cancel(); _ctrl.dispose(); super.dispose(); }
 
   @override Widget build(_) => Scaffold(body: SafeArea(child: Column(children: [
@@ -105,7 +126,9 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
       ])),
     const SizedBox(height: 4),
 
-    Expanded(child: Center(child: GestureDetector(onTap: () => _know(true),
+    Expanded(child: Center(child: GestureDetector(
+      onTap: () => _know(true),
+      onHorizontalDragEnd: (d) { if (d.primaryVelocity != null && d.primaryVelocity! > 300) _goBack(); },
       child: AnimatedSwitcher(duration: const Duration(milliseconds: 300),
         transitionBuilder: (w, a) => FadeTransition(opacity: a, child: w),
         child: _card(_flipped ? _back : _front, isBack: _flipped)),
@@ -159,4 +182,10 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
       shape: BoxShape.circle, color: Colors.white.withAlpha(5),
       border: Border.all(color: Colors.white.withAlpha(10)),
     ), child: const Center(child: Text('▲', style: TextStyle(color: Colors.white24, fontSize: 16)))));
+}
+
+class _CardHistory {
+  final String front, back, deck;
+  final bool flipped;
+  const _CardHistory({required this.front, required this.back, required this.deck, required this.flipped});
 }
