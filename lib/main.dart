@@ -29,17 +29,27 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
     '유머': [('세상에서 가장 쉬운 AI','이보다 더 쉬운 AI는 없다.'),('AI가 먼저 말 걸면?','사람은 그냥 ○✕'),('코딩 몰라도 만드는 앱','그게 TikiTaka')],
   };
 
+  // ─── State ────────────────────────────────────
   String _deck = '영어';
   String _front = '', _back = '';
-  int _count = 0, _streak = 0;
-  bool _flipped = false, _muted = false;
-  Timer? _autoTimer;
-  final List<_CardHistory> _history = []; // 스와이프용 히스토리
-  int _historyIdx = -1;                   // 현재 보고 있는 히스토리 위치
+  int _count = 0, _streak = 0, _total = 0;
+  bool _flipped = false;
+  bool _ttsOn = true;             // 기본: 음성 ON
+  bool _requestMode = false;      // 요청모드 (▲) vs 답변모드 (▼)
 
-  // Smart timer
+  // Tutorial cards interleaved
+  int _tutorialIdx = 0;
+  static const _tutorials = [
+    ('삼각형을 눌러 "소리 꺼줘"라고 요청하면\n음성이 나오지 않습니다.',
+     '지금 음성이 나오고 있다면\n▲를 누르고 "소리 꺼줘"라고 말씀하세요.'),
+    ('오른쪽으로 스와이프하면\n방금 본 카드를 다시 볼 수 있어요.',
+     '👉 오른쪽으로 밀어보세요.\n이전 카드로 돌아갑니다.'),
+  ];
+
+  // History
+  final List<_CardHistory> _history = [];
+  Timer? _autoTimer, _soundTimer;
   int _idleCount = 0;
-  final List<int> _responseMs = [];
   static const _fib = [5, 8, 13, 21, 34, 55, 89];
 
   @override void initState() {
@@ -48,82 +58,138 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
     _next(); _resetTimer();
   }
 
+  // ─── Smart Timer ──────────────────────────────
+
   int _nextTimeout() {
     int base = _fib[_idleCount.clamp(0, _fib.length - 1)];
-    if (_responseMs.isNotEmpty) {
-      final avgSec = _responseMs.reduce((a,b)=>a+b) / _responseMs.length / 1000;
-      if (avgSec > base * 0.7) base = (base * 1.5).round();
-      else if (avgSec < base * 0.3) base = (base * 0.7).round();
-    }
     return base.clamp(3, 120);
   }
 
   void _resetTimer() {
     _autoTimer?.cancel();
     _autoTimer = Timer(Duration(seconds: _nextTimeout()), () {
-      if (!mounted) return;
-      if (!_flipped) {
-        _idleCount++;
-        _ctrl.forward(); setState(() => _flipped = true);
-        _resetTimer();
-      } else {
-        _next(); _resetTimer();
-      }
+      if (!mounted || _requestMode) return;
+      if (!_flipped) { _idleCount++; _flip(); _resetTimer(); }
+      else { _next(); _resetTimer(); }
     });
   }
 
+  // ─── Next Card ────────────────────────────────
+
   void _next() {
-    final deck = _decks[_deck]!;
-    final i = _rng.nextInt(deck.length);
-    // Save current to history before moving on
+    _soundTimer?.cancel();
     if (_front.isNotEmpty) {
       _history.add(_CardHistory(front: _front, back: _back, deck: _deck, flipped: _flipped));
       if (_history.length > 50) _history.removeAt(0);
     }
-    _historyIdx = -1; // not viewing history
-    _flipped = false;
-    _front = deck[i].$1; _back = deck[i].$2;
+
+    // Tutorial every ~8 cards
+    if (_total > 0 && _total % 8 == 0 && _tutorialIdx < _tutorials.length) {
+      final t = _tutorials[_tutorialIdx];
+      _front = t.$1; _back = t.$2; _deck = '사용법';
+      _tutorialIdx++;
+    } else {
+      final deck = _decks[_deck]!;
+      final i = _rng.nextInt(deck.length);
+      _front = deck[i].$1; _back = deck[i].$2;
+    }
+
+    _flipped = false; _total++;
     if (_ctrl.isCompleted) _ctrl.reverse();
     setState(() {});
+    _playPingPong(isFlip: false); // 다음카드 나오는 소리
   }
 
-  void _know(bool known) {
-    HapticFeedback.lightImpact();
-    // 🏓 티키타카 탁구공 소리
-    if (known) {
-      SystemSound.play(SystemSoundType.click); // 탁! (라켓)
-    } else {
-      SystemSound.play(SystemSoundType.alert); // 틱! (다이)
-    }
-    _autoTimer?.cancel(); _idleCount = 0;
+  // ─── Flip ─────────────────────────────────────
 
-    if (known) _responseMs.add(800); // approximate click time
-    if (_responseMs.length > 20) _responseMs.removeAt(0);
+  void _flip() {
+    _ctrl.forward();
+    setState(() => _flipped = true);
+    _playPingPong(isFlip: true); // 카드 뒤집히는 소리
+  }
+
+  // ─── 🏓 Ping-Pong Sound ───────────────────────
+
+  void _playPingPong({required bool isFlip}) {
+    _soundTimer?.cancel();
+    // "타" — first hit
+    HapticFeedback.lightImpact();
+    SystemSound.play(isFlip ? SystemSoundType.click : SystemSoundType.alert);
+    // 0.4초 후 "탁" — second hit
+    _soundTimer = Timer(const Duration(milliseconds: 400), () {
+      HapticFeedback.lightImpact();
+      SystemSound.play(isFlip ? SystemSoundType.alert : SystemSoundType.click);
+      // 0.3초 후 TTS 시작
+      if (_ttsOn && !_requestMode) {
+        _soundTimer = Timer(const Duration(milliseconds: 300), () {
+          // TTS: 읽기 시작 (flutter_tts로 구현)
+        });
+      }
+    });
+  }
+
+  // ─── Tap: O or X ──────────────────────────────
+
+  void _tap() {
+    _soundTimer?.cancel(); // 진행 중인 TTS 즉시 중단
+    HapticFeedback.lightImpact();
+    _idleCount = 0; _autoTimer?.cancel();
 
     if (!_flipped) {
-      _ctrl.forward(); setState(() => _flipped = true);
+      _flip();
     } else {
-      if (known) { _count++; _streak++; } else { _streak = 0; }
       _next();
     }
     _resetTimer();
   }
 
-  void _switchDeck(String name) { _deck = name; _count = 0; _streak = 0; _next(); _resetTimer(); }
+  // ─── History (swipe back) ─────────────────────
+
   void _goBack() {
     if (_history.isEmpty) return;
     _autoTimer?.cancel();
     final prev = _history.removeLast();
-    _historyIdx = _history.length;
-    _flipped = prev.flipped;
-    _front = prev.front; _back = prev.back;
-    _deck = prev.deck;
+    _flipped = prev.flipped; _front = prev.front; _back = prev.back; _deck = prev.deck;
     if (_flipped) _ctrl.forward(); else _ctrl.reverse();
     setState(() {});
     _resetTimer();
   }
 
-  @override void dispose() { _autoTimer?.cancel(); _ctrl.dispose(); super.dispose(); }
+  // ─── Request Mode (▲) ─────────────────────────
+
+  void _toggleRequestMode() {
+    setState(() => _requestMode = !_requestMode);
+    if (!_requestMode) _resetTimer(); // 답변모드로 복귀
+  }
+
+  void _submitRequest(String request) {
+    _soundTimer?.cancel();
+    if (request.contains('소리 꺼') || request.contains('음성 꺼') || request.contains('mute')) {
+      _ttsOn = false;
+      _front = '음성을 껐습니다.'; _back = '다시 켜시려면 ▲ "소리 켜줘"라고 요청하세요.';
+    } else if (request.contains('소리 켜') || request.contains('음성 켜')) {
+      _ttsOn = true;
+      _front = '음성을 켰습니다.'; _back = '';
+    } else if (request.contains('뉴스')) {
+      _front = '뉴스 플러그인을 시작합니다.'; _back = '최신 뉴스를 카드로 보여드릴게요.';
+    } else {
+      _front = '요청을 처리했어요.'; _back = request;
+    }
+    _deck = '요청';
+    _flipped = false;
+    _requestMode = false; // 요청 처리 후 자동 복귀
+    if (_ctrl.isCompleted) _ctrl.reverse();
+    setState(() {});
+    _playPingPong(isFlip: false);
+    _resetTimer();
+  }
+
+  // ─── Subject switch ───────────────────────────
+
+  void _switchDeck(String name) { _deck = name; _count = 0; _streak = 0; _next(); _resetTimer(); }
+  @override void dispose() { _soundTimer?.cancel(); _autoTimer?.cancel(); _ctrl.dispose(); super.dispose(); }
+
+  // ─── UI ───────────────────────────────────────
 
   @override Widget build(_) => Scaffold(body: SafeArea(child: Column(children: [
     Padding(padding: const EdgeInsets.fromLTRB(20, 12, 20, 4), child: Row(
@@ -134,9 +200,9 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
     const SizedBox(height: 4),
 
     Expanded(child: Center(child: GestureDetector(
-      onTap: () => _know(true),
+      onTap: _tap,
       onHorizontalDragEnd: (d) {
-        if (d.primaryVelocity != null && d.primaryVelocity! < -300) _goBack(); // 👉 right swipe
+        if (d.primaryVelocity != null && d.primaryVelocity! < -300) _goBack();
       },
       child: AnimatedSwitcher(duration: const Duration(milliseconds: 300),
         transitionBuilder: (w, a) => FadeTransition(opacity: a, child: w),
@@ -146,9 +212,9 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
     Container(decoration: BoxDecoration(border: Border(top: BorderSide(color: Colors.white.withAlpha(6)))),
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
       child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        _btn('✕', const Color(0xFF8B4242), () => _know(false)),
+        _btn('✕', const Color(0xFF8B4242), _tap),
         _centerBtn(),
-        _btn('○', const Color(0xFFD4A574), () => _know(true)),
+        _btn('○', const Color(0xFFD4A574), _tap),
       ])),
 
     Padding(padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
@@ -186,12 +252,32 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
     ), child: Center(child: Text(sym, style: TextStyle(color: color.withAlpha(220), fontSize: 24)))));
 
   Widget _centerBtn() => GestureDetector(
-    onTap: () => setState(() => _muted = !_muted),
+    onTap: () => _showRequestDialog(),
     child: Container(width: 40, height: 40, decoration: BoxDecoration(
-      shape: BoxShape.circle, color: Colors.white.withAlpha(_muted ? 15 : 5),
-      border: Border.all(color: _muted ? const Color(0xFFD4A574).withAlpha(40) : Colors.white.withAlpha(10)),
-    ), child: Center(child: Icon(_muted ? Icons.volume_off : Icons.volume_up,
-        size: 16, color: _muted ? const Color(0xFFD4A574).withAlpha(180) : Colors.white24))));
+      shape: BoxShape.circle,
+      color: Colors.white.withAlpha(_requestMode ? 15 : 5),
+      border: Border.all(color: _requestMode ? const Color(0xFFD4A574).withAlpha(40) : Colors.white.withAlpha(10)),
+    ), child: Center(child: Text(_requestMode ? '▲' : '▼',
+        style: TextStyle(color: _requestMode ? const Color(0xFFD4A574).withAlpha(180) : Colors.white24, fontSize: 16)))));
+
+  void _showRequestDialog() {
+    if (_requestMode) { _toggleRequestMode(); return; }
+    final ctrl = TextEditingController();
+    showDialog(context: context, builder: (ctx) => AlertDialog(
+      backgroundColor: const Color(0xFF1A1A1A),
+      title: const Text('요청하기', style: TextStyle(color: Color(0xFFD4A574))),
+      content: TextField(controller: ctrl, autofocus: true,
+        style: const TextStyle(color: Colors.white),
+        decoration: const InputDecoration(hintText: '"뉴스 보여줘" 또는 "소리 꺼줘"',
+            hintStyle: TextStyle(color: Colors.white24))),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx),
+            child: const Text('취소', style: TextStyle(color: Colors.white38))),
+        TextButton(onPressed: () { Navigator.pop(ctx); _submitRequest(ctrl.text); },
+            child: const Text('전송', style: TextStyle(color: Color(0xFFD4A574)))),
+      ],
+    ));
+  }
 }
 
 class _CardHistory {
