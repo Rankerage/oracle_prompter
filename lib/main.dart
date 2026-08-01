@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 void main() => runApp(const TikiTakaApp());
 
@@ -87,7 +88,13 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
   }
 
   void _know(bool known) {
-    final now = DateTime.now().millisecondsSinceEpoch;
+    HapticFeedback.lightImpact();
+    // 🏓 티키타카 탁구공 소리
+    if (known) {
+      SystemSound.play(SystemSoundType.click); // 탁! (라켓)
+    } else {
+      SystemSound.play(SystemSoundType.alert); // 틱! (다이)
+    }
     _autoTimer?.cancel(); _idleCount = 0;
 
     if (known) _responseMs.add(800); // approximate click time
