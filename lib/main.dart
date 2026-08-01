@@ -31,7 +31,7 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
   String _deck = '영어';
   String _front = '', _back = '';
   int _count = 0, _streak = 0;
-  bool _flipped = false;
+  bool _flipped = false, _muted = false;
   Timer? _autoTimer;
   final List<_CardHistory> _history = []; // 스와이프용 히스토리
   int _historyIdx = -1;                   // 현재 보고 있는 히스토리 위치
@@ -128,7 +128,9 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
 
     Expanded(child: Center(child: GestureDetector(
       onTap: () => _know(true),
-      onHorizontalDragEnd: (d) { if (d.primaryVelocity != null && d.primaryVelocity! > 300) _goBack(); },
+      onHorizontalDragEnd: (d) {
+        if (d.primaryVelocity != null && d.primaryVelocity! < -300) _goBack(); // 👉 right swipe
+      },
       child: AnimatedSwitcher(duration: const Duration(milliseconds: 300),
         transitionBuilder: (w, a) => FadeTransition(opacity: a, child: w),
         child: _card(_flipped ? _back : _front, isBack: _flipped)),
@@ -177,11 +179,12 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
     ), child: Center(child: Text(sym, style: TextStyle(color: color.withAlpha(220), fontSize: 24)))));
 
   Widget _centerBtn() => GestureDetector(
-    onTap: () {},
+    onTap: () => setState(() => _muted = !_muted),
     child: Container(width: 40, height: 40, decoration: BoxDecoration(
-      shape: BoxShape.circle, color: Colors.white.withAlpha(5),
-      border: Border.all(color: Colors.white.withAlpha(10)),
-    ), child: const Center(child: Text('▲', style: TextStyle(color: Colors.white24, fontSize: 16)))));
+      shape: BoxShape.circle, color: Colors.white.withAlpha(_muted ? 15 : 5),
+      border: Border.all(color: _muted ? const Color(0xFFD4A574).withAlpha(40) : Colors.white.withAlpha(10)),
+    ), child: Center(child: Icon(_muted ? Icons.volume_off : Icons.volume_up,
+        size: 16, color: _muted ? const Color(0xFFD4A574).withAlpha(180) : Colors.white24))));
 }
 
 class _CardHistory {
