@@ -15,11 +15,10 @@ dependencies:
   provider: ^6.1.2
 
   # ─── 오픈소스 음성 서브시스템 ───
-  # --- Android-specific (disabled for Windows build) ---
-  # flutter_tts: ^4.2.2
-  # speech_to_text: ^7.0.0
-  # camera: ^0.11.1
-  # flutter_foreground_task: ^8.17.0
+  flutter_tts: ^4.2.2
+  speech_to_text: ^7.0.0
+  camera: ^0.11.1
+  flutter_foreground_task: ^8.17.0
   sherpa_onnx: ^1.13.4         # On-device STT (SenseVoice/Moonshine, Korean OK)
   # ─── 오픈소스 온디바이스 LLM ───
   llama_cpp_dart: 0.2.2       # llama.cpp Dart binding → GGUF models

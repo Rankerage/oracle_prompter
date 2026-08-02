@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 import 'package:http/http.dart' as http;
 
 void main() => runApp(const TikiTakaApp());
@@ -21,6 +22,7 @@ class Home extends StatefulWidget { const Home({super.key}); @override State<Hom
 class _HomeState extends State<Home> {
   final _rng = Random();
   final _cmdCtrl = TextEditingController();
+  final FlutterTts _tts = FlutterTts();
   final List<String> _following = [];
   final List<String> _queue = [];
   int _qIdx = 0;
@@ -42,7 +44,13 @@ class _HomeState extends State<Home> {
   // Command mode state
   String _cmdPending = ''; // what subject was selected
 
-  @override void initState() { super.initState(); _load('영어'); }
+  @override void initState() {
+    super.initState();
+    _tts.setLanguage('ko-KR');
+    _tts.setSpeechRate(0.5); // 1.25x faster (0.5 = fast in flutter_tts)
+    _tts.setPitch(1.0);
+    _load('영어');
+  }
   @override void dispose() { _cmdCtrl.dispose(); super.dispose(); }
 
   void _load(String s) {
@@ -71,23 +79,26 @@ class _HomeState extends State<Home> {
     if(mounted) setState((){});
   }
 
-  void _next() { if(_queue.isEmpty)_queue.add('...'); _isBack=false; _qIdx=_rng.nextInt(_queue.length); _cardNum++; setState((){}); }
+  void _next() { if(_queue.isEmpty)_queue.add('...'); _isBack=false; _qIdx=_rng.nextInt(_queue.length); _cardNum++; _speak(_front()); setState((){}); }
   String get _cur => _queue.isNotEmpty?_queue[_qIdx%_queue.length]:'';
   String _front() => _cur.contains(' ')?_cur.split(' ').first:_cur;
   String _back() => _cur.contains(' ')?_cur.substring(_cur.indexOf(' ')+1):_cur;
   void _sound() { if(!_soundOn)return; try{SystemSound.play(SystemSoundType.click);}catch(_){} }
+  void _speak(String text) async {
+    if (!_soundOn) return;
+    try { await _tts.stop(); await _tts.speak(text); } catch (_) {}
+  }
 
   void _onO() {
     if (_cmdMode) {
-      if (!_isBack) { _isBack = true; _sound(); setState((){}); return; } // flip cmd card
-      // Back of cmd card: execute pending
+      if (!_isBack) { _isBack = true; _sound(); setState((){}); return; }
       _sound();
       if (_cmdPending.isNotEmpty) { _load(_cmdPending); } else { _load(_subject); }
       _cmdMode = false; _cmdPending = ''; _cmdCtrl.clear();
       setState((){}); return;
     }
     if (_isBack) { _next(); return; }
-    _sound(); _isBack = true; _goodCount++; setState((){});
+    _sound(); _isBack = true; _goodCount++; _speak(_back()); setState((){});
   }
 
   void _onX() {
@@ -96,7 +107,7 @@ class _HomeState extends State<Home> {
       setState((){}); return;
     }
     if (_isBack) { _next(); return; }
-    _sound(); _isBack = true; setState((){});
+    _sound(); _isBack = true; _speak(_back()); setState((){});
   }
 
   void _toggleCmd() {
