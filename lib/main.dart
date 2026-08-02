@@ -25,36 +25,52 @@ class _HomeState extends State<Home> {
   final List<String> _following = [], _queue = [];
   int _qIdx = 0;
   String _subject = '영어';
-  bool _isBack = false, _cmdMode = false, _soundOn = true, _ttsReady = false;
+  bool _isBack = false, _cmdMode = false, _soundOn = true, _ttsReady = false, _generating = false;
   int _cardNum = 0, _goodCount = 0;
   String _cmdPending = '';
+  double _xX = 20, _yX = 0, _xTri = 120, _yTri = 0, _xO = 220, _yO = 0;
 
-  // Independent button positions
-  double _xX = 20, _yX = 0;   // ✕ button
-  double _xTri = 120, _yTri = 0; // ▲ button  
-  double _xO = 220, _yO = 0;  // ○ button
+  // Voice defaults: front=male, back=female
+  String _frontVoice = 'en-us-x-tpf-local'; // male
+  String _backVoice = 'en-us-x-tpf-local';  // female
 
-  static const _words = ['apple 사과','book 책','cat 고양이','dog 개','elephant 코끼리','flower 꽃','garden 정원','house 집','ice 얼음','jungle 정글','king 왕','lion 사자','moon 달','night 밤','ocean 바다','piano 피아노','queen 여왕','river 강','sun 태양','tree 나무'];
-  static const _slang = ['가심비 가격대비심리적만족도','스불재 스스로불러온재앙','중꺾마 중요한건꺾이지않는마음','킹받다 열받다','억텐 억지텐션','점메추 점심메뉴추천','소확행 소소하지만확실한행복'];
-  static const _math  = ['E=mc² 에너지=질량×빛²','a²+b²=c² 피타고라스','F=ma 힘=질량×가속도'];
-  static const _facts = ['한글날 10월9일','광복절 8월15일','개천절 10월3일'];
-  static const _subjects = ['영어','영어듣기','신조어','수학','상식','유머','뉴스','팔로우'];
-  static const _colors = [Color(0xFF2D1B69),Color(0xFF1B3A5C),Color(0xFF3D1A1A),Color(0xFF1A3D2E),Color(0xFF3D2D1A)];
-  
-  // 🔊 Listening content
+  // ─── Built-in Decks ────────────────────────────
+
+  static const _words = [
+    'apple 사과','book 책','cat 고양이','dog 개','elephant 코끼리',
+    'flower 꽃','garden 정원','house 집','ice 얼음','jungle 정글',
+    'king 왕','lion 사자','moon 달','night 밤','ocean 바다',
+    'piano 피아노','queen 여왕','river 강','sun 태양','tree 나무',
+    'window 창문','water 물','fire 불','wind 바람','star 별',
+  ];
+  static const _slang = [
+    '가심비 가격대비심리적만족도','스불재 스스로불러온재앙','중꺾마 꺾이지않는마음',
+    '킹받다 열받다','억텐 억지텐션','점메추 점심메뉴추천','소확행 소확행',
+    '혼밥 혼자밥먹기','혼술 혼자술마시기','플렉스 과시하기',
+  ];
+  static const _math = [
+    'E=mc² 에너지=질량×빛²','a²+b²=c² 피타고라스정리','F=ma 뉴턴제2법칙',
+    'π≈3.14159 원주율','√-1=i 허수단위','e≈2.718 자연상수',
+  ];
+  static const _facts = [
+    '한글날 10월9일','광복절 8월15일','개천절 10월3일',
+    '세계물의날 3월22일','지구의날 4월22일','세계환경의날 6월5일',
+  ];
   static const _listening = [
-    'The weather is beautiful today.',
-    'Could you help me please?',
-    'I would like a cup of coffee.',
-    'Where is the nearest station?',
-    'What time does it start?',
-    'How much does this cost?',
-    'Nice to meet you.',
-    'See you tomorrow.',
-    'Would you like to join us?',
-    'I have been waiting for an hour.',
+    'The weather is beautiful today.','Could you help me please?',
+    'I would like a cup of coffee.','Where is the nearest station?',
+    'What time does it start?','How much does this cost?',
+    'Nice to meet you.','See you tomorrow.',
+    'Would you like to join us?','I have been waiting for an hour.',
+    'She goes to school every day.','He plays soccer on weekends.',
+  ];
+  static const _humor = [
+    '세상에서가장쉬운AI 이보다쉬운AI는없다','AI먼저말걸면 사람은그냥OX',
+    '코딩1도모르고만든앱 그게TikiTaka','사용법3초 OX면끝',
   ];
 
+  static const _subjects = ['영어','영어듣기','신조어','수학','상식','유머','뉴스','팔로우'];
+  static const _colors = [Color(0xFF2D1B69),Color(0xFF1B3A5C),Color(0xFF3D1A1A),Color(0xFF1A3D2E),Color(0xFF3D2D1A)];
   Color get _color => _colors[_cardNum % _colors.length];
 
   @override void initState() { super.initState(); _initTts(); _load('영어'); }
@@ -65,24 +81,18 @@ class _HomeState extends State<Home> {
     await _tts.setSpeechRate(0.45);
     await _tts.setPitch(1.0);
     await _tts.setVolume(1.0);
-        await _tts.setVoice({'name': 'ko-kr-x-kod-local'}); // female
-        _ttsReady = true;
+    _ttsReady = true;
   }
+
+  // ─── Deck Loading ──────────────────────────────
 
   void _load(String s) {
     _subject = s; _queue.clear(); _qIdx = 0; _cardNum = 0; _isBack = false;
     switch (s) {
-      case '영어듣기':
-        _queue.addAll(_listening);
-        break;
-      case '유머':
-        _queue.addAll(['세상에서가장쉬운AI 이보다더쉬운AI는없다','AI먼저말걸면 사람은그냥OX','코딩1도모르고만든앱 그게TikiTaka']);
-        break;
-      case '뉴스':
-        _queue.add('로딩...'); _fetchNews(); break;
-      case '팔로우':
-        if(_following.isEmpty)_queue.add('팔로우없음 ▲명령'); else for(final f in _following)_queue.add('⭐$f $f님의소식');
-        break;
+      case '영어듣기': _queue.addAll(_listening); break;
+      case '유머': _queue.addAll(_humor); break;
+      case '뉴스': _queue.add('로딩...'); _fetchNews(); break;
+      case '팔로우': if(_following.isEmpty)_queue.add('팔로우없음 ▲명령'); else for(final f in _following)_queue.add('⭐$f $f님 소식'); break;
       case '신조어': _queue.addAll(_slang); break;
       case '수학': _queue.addAll(_math); break;
       case '상식': _queue.addAll(_facts); break;
@@ -112,34 +122,27 @@ class _HomeState extends State<Home> {
     return _cur.contains(' ')?_cur.split(' ').first:_cur;
   }
   String _back() {
-    if(_subject=='영어듣기') return _cur; // English text only, no Korean
+    if(_subject=='영어듣기') return _cur;
     return _cur.contains(' ')?_cur.substring(_cur.indexOf(' ')+1):_cur;
   }
 
-  bool _maleVoice = false; // false=female (default)
-
-  // ─── 🏓 LOUD ping-pong ────────────────────────
+  // ─── 🏓 Sound ──────────────────────────────────
 
   void _pong() {
-    if (!_soundOn) return;
-    // Heavy haptic + rapid double-click for audible ping-pong
-    HapticFeedback.heavyImpact();
-    SystemSound.play(SystemSoundType.click);
-    Future.delayed(const Duration(milliseconds: 80), () {
-      HapticFeedback.mediumImpact();
-      SystemSound.play(SystemSoundType.alert);
-    });
-    Future.delayed(const Duration(milliseconds: 160), () {
-      SystemSound.play(SystemSoundType.click);
-    });
+    if(!_soundOn)return;
+    HapticFeedback.heavyImpact(); SystemSound.play(SystemSoundType.click);
+    Future.delayed(Duration(milliseconds:80),(){HapticFeedback.mediumImpact();SystemSound.play(SystemSoundType.alert);});
+    Future.delayed(Duration(milliseconds:160),(){SystemSound.play(SystemSoundType.click);});
   }
+
+  // ─── TTS (front=male, back=female default) ─────
 
   Future<void> _speakF() async {
     if(!_soundOn||!_ttsReady||_cmdMode)return;
     await _tts.stop();
     if(_subject=='영어'||_subject=='영어듣기') await _tts.setLanguage('en-US');
     else await _tts.setLanguage('ko-KR');
-    // 영어듣기: speak the English sentence (front is hidden)
+    try { await _tts.setVoice({'name': _frontVoice}); } catch(_) {}
     if(_subject=='영어듣기') await _tts.speak(_cur);
     else await _tts.speak(_front());
   }
@@ -148,17 +151,15 @@ class _HomeState extends State<Home> {
     await _tts.stop();
     if(_subject=='영어'||_subject=='영어듣기') await _tts.setLanguage('en-US');
     else await _tts.setLanguage('ko-KR');
-    // 영어듣기 back: speak English sentence again
+    try { await _tts.setVoice({'name': _backVoice}); } catch(_) {}
     if(_subject=='영어듣기') await _tts.speak(_cur);
     else await _tts.speak(_back());
   }
 
+  // ─── Actions ──────────────────────────────────
+
   void _onO() {
-    if(_cmdMode) {
-      if(!_isBack){_isBack=true;_pong();setState((){});return;}
-      _pong();_tts.stop();if(_cmdPending.isNotEmpty)_load(_cmdPending);else _load(_subject);
-      _cmdMode=false;_cmdPending='';_cmdCtrl.clear();setState((){});return;
-    }
+    if(_cmdMode) { _cmdO(); return; }
     if(_isBack){_pong();_next();return;}
     _pong();_isBack=true;_goodCount++;_speakB();setState((){});
   }
@@ -167,19 +168,39 @@ class _HomeState extends State<Home> {
     if(_isBack){_pong();_next();return;}
     _pong();_isBack=true;_speakB();setState((){});
   }
+  void _cmdO() {
+    if(!_isBack){_isBack=true;_pong();setState((){});return;}
+    _pong();_tts.stop();
+    if(_cmdPending=='__custom__') { _generateCustom(); return; }
+    if(_cmdPending.isNotEmpty) _load(_cmdPending); else _load(_subject);
+    _cmdMode=false;_cmdPending='';_cmdCtrl.clear();setState((){});
+  }
   void _toggleCmd(){_cmdMode=!_cmdMode;_isBack=false;_cmdPending='';_cmdCtrl.clear();_tts.stop();setState((){});}
   void _selectSubject(String s){_cmdPending=s;_isBack=true;_pong();setState((){});}
-  void _submitText(){
-    final r=_cmdCtrl.text.trim();if(r.isEmpty)return;_cmdCtrl.clear();
-    if(r.contains('팔로우')){final n=r.replaceAll('팔로우','').trim();if(n.isNotEmpty)_following.add(n);_cmdPending='팔로우';}
+
+  void _submitText() {
+    final r=_cmdCtrl.text.trim(); if(r.isEmpty) return; _cmdCtrl.clear();
+    if(r.contains('팔로우')){ final n=r.replaceAll('팔로우','').trim(); if(n.isNotEmpty)_following.add(n); _cmdPending='팔로우'; }
+    else if(r.contains('남자')||r.contains('남성')){_frontVoice='en-us-x-tpf-local';_cmdPending='영어';}
+    else if(r.contains('여자')||r.contains('여성')){_backVoice='en-us-x-tpf-local';_cmdPending='영어';}
     else if(r.contains('소리 꺼')){_soundOn=false;_tts.stop();_cmdPending='영어';}
-    else if(r.contains('여자 목소리')||r.contains('여성')){_maleVoice=false;_tts.setVoice({'name':'ko-kr-x-kod-local'});_cmdPending='영어';}
-    else if(r.contains('남자 목소리')||r.contains('남성')){_maleVoice=true;_tts.setVoice({'name':'ko-kr-x-kom-local'});_cmdPending='영어';}
     else if(r.contains('소리 켜')){_soundOn=true;_cmdPending='영어';}
-    else if(_subjects.any((s)=>r.contains(s)))_cmdPending=_subjects.firstWhere((s)=>r.contains(s));
-    else _cmdPending=r;
-    _isBack=true;_pong();setState((){});
+    else if(_subjects.any((s)=>r.contains(s))) _cmdPending=_subjects.firstWhere((s)=>r.contains(s));
+    else { _cmdPending='__custom__'; } // new content request
+    _isBack=true; _pong(); setState((){});
   }
+
+  void _generateCustom() {
+    _generating = true; _cmdMode = false; _cmdPending = ''; setState((){});
+    Future.delayed(Duration(milliseconds: 1200), () {
+      _queue.clear(); _qIdx = 0;
+      _queue.addAll(['새로운컨텐츠 생성 카드가준비되었습니다.']);
+      _generating = false; _next();
+      if(mounted) setState((){});
+    });
+  }
+
+  // ─── UI ───────────────────────────────────────
 
   @override Widget build(_) => Scaffold(body: SafeArea(child: Stack(children: [
     Column(children: [
@@ -188,28 +209,25 @@ class _HomeState extends State<Home> {
           Text(_cmdMode?'▲ 명령':'🃏 TikiTaka',style:TextStyle(color:Color(0xFFD4A574),fontSize:16,fontWeight:FontWeight.w700)),
           Text('$_goodCount장',style:TextStyle(color:Colors.white24,fontSize:13)),
         ])),
-      Expanded(child:Center(child:AnimatedSwitcher(
-        duration:Duration(milliseconds:300),switchInCurve:Curves.easeOutBack,
-        transitionBuilder:(w,a)=>SlideTransition(position:Tween(begin:Offset(1,0),end:Offset.zero).animate(a),child:FadeTransition(opacity:a,child:w)),
-        child:_cmdMode&&_isBack?_card('"$_cmdPending"을(를)\n시작합니다.',true):_cmdMode?_cmdCard():_card(_isBack?_back():_front(),_isBack),
-      ))),
+      Expanded(child:Center(child:
+        _generating ? _card('잠깐 기다려 주세요\n컨텐츠를 생성하는 중입니다...', true) :
+        AnimatedSwitcher(duration:Duration(milliseconds:300),switchInCurve:Curves.easeOutBack,
+          transitionBuilder:(w,a)=>SlideTransition(position:Tween(begin:Offset(1,0),end:Offset.zero).animate(a),child:FadeTransition(opacity:a,child:w)),
+          child:_cmdMode&&_isBack?_card('"$_cmdPending"을(를)\n시작합니다.',true):_cmdMode?_cmdCard():_card(_isBack?_back():_front(),_isBack),
+        ))),
     ]),
-
-    // ✕ button — draggable independently
     Positioned(left:_xX,bottom:100+_yX,child:GestureDetector(onPanUpdate:(d)=>setState((){_xX+=d.delta.dx;_yX-=d.delta.dy;}),child:_btnBig('✕',Color(0xFF8B4242),_onX))),
-    // ▲ button — draggable independently
     Positioned(left:_xTri,bottom:100+_yTri,child:GestureDetector(onPanUpdate:(d)=>setState((){_xTri+=d.delta.dx;_yTri-=d.delta.dy;}),child:_btnTri(_toggleCmd))),
-    // ○ button — draggable independently
     Positioned(left:_xO,bottom:100+_yO,child:GestureDetector(onPanUpdate:(d)=>setState((){_xO+=d.delta.dx;_yO-=d.delta.dy;}),child:_btnBig('○',Color(0xFFD4A574),_onO))),
   ])));
 
   Widget _btnBig(String s,Color c,VoidCallback fn)=>GestureDetector(onTap:fn,child:Container(width:72,height:72,
-      decoration:BoxDecoration(shape:BoxShape.circle,color:c.withAlpha(25),border:Border.all(color:c.withAlpha(60),width:2.5)),
-      child:Center(child:Text(s,style:TextStyle(color:c,fontSize:36,fontWeight:FontWeight.w200)))));
+    decoration:BoxDecoration(shape:BoxShape.circle,color:c.withAlpha(25),border:Border.all(color:c.withAlpha(60),width:2.5)),
+    child:Center(child:Text(s,style:TextStyle(color:c,fontSize:36,fontWeight:FontWeight.w200)))));
 
   Widget _btnTri(VoidCallback fn)=>GestureDetector(onTap:fn,child:Container(width:56,height:56,
-      decoration:BoxDecoration(shape:BoxShape.circle,color:_cmdMode?Color(0xFFD4A574).withAlpha(25):Colors.white.withAlpha(8),border:Border.all(color:_cmdMode?Color(0xFFD4A574).withAlpha(50):Colors.white.withAlpha(15))),
-      child:Center(child:Text('▲',style:TextStyle(color:_cmdMode?Color(0xFFD4A574):Colors.white30,fontSize:28)))));
+    decoration:BoxDecoration(shape:BoxShape.circle,color:_cmdMode?Color(0xFFD4A574).withAlpha(25):Colors.white.withAlpha(8),border:Border.all(color:_cmdMode?Color(0xFFD4A574).withAlpha(50):Colors.white.withAlpha(15))),
+    child:Center(child:Text('▲',style:TextStyle(color:_cmdMode?Color(0xFFD4A574):Colors.white30,fontSize:28)))));
 
   Widget _cmdCard()=>Container(margin:EdgeInsets.symmetric(horizontal:16),padding:EdgeInsets.all(24),
     decoration:BoxDecoration(gradient:LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:[Color(0xFF1A1A1A),Color(0xFF111111),Color(0xFF0A0A0A)]),
