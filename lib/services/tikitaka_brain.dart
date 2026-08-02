@@ -1,125 +1,168 @@
-import '../services/markdown_vault.dart';
-import '../services/interest_engine.dart';
-import '../services/fsrs_bridge.dart';
-import '../services/ai_leitner_engine.dart';
+import 'adaptive_fsrs.dart';
+import 'content_fsrs.dart';
+import 'card_factory.dart';
 
-/// 🧠 TikiTaka Brain — the central intelligence
+/// 🧠 TikiTaka Brain — 학습기록 → LLM 분석 → 가중치 업그레이드
 ///
-/// Connects all subsystems to create a truly smart companion.
-/// Every decision passes through here.
+/// 1. 모든 사용자 반응 수집
+/// 2. 통계로 가공
+/// 3. LLM에게 전달할 컨텍스트 생성
+/// 4. LLM의 제안을 받아 가중치 업데이트
 class TikiTakaBrain {
   static final TikiTakaBrain _i = TikiTakaBrain._();
   factory TikiTakaBrain() => _i;
   TikiTakaBrain._();
 
-  final MarkdownVault _vault = MarkdownVault();
-  final InterestEngine _interest = InterestEngine();
-  final Map<String, FSRSBridge> _subjects = {};
+  final _fsrs = AdaptiveFSRS();
+  final _content = ContentFSRS();
+  final _history = <_LogEntry>[];
 
-  bool _initialized = false;
+  // ─── Recording ─────────────────────────────────
 
-  Future<void> init() async {
-    await _vault.init();
-    _initialized = true;
+  void recordCard({
+    required String subject, required bool known,
+    DateTime? time, int? responseMs,
+  }) {
+    _fsrs.record(subject, known, responseMs: responseMs);
+    _history.add(_LogEntry(
+      time: time ?? DateTime.now(),
+      subject: subject,
+      known: known,
+      responseMs: responseMs,
+    ));
+    // Keep last 1000 entries
+    if (_history.length > 1000) _history.removeRange(0, 100);
   }
 
-  // ─── Cross-session memory ──────────────────────
+  void recordSubjectChange(String from, String to) {
+    _history.add(_LogEntry(
+      time: DateTime.now(),
+      subject: '→$to',
+      known: true,
+    ));
+  }
 
-  /// Recall past context: "What did I tell you about X last time?"
-  Future<String> recall(String topic) async {
-    final memories = await _vault.readMemories();
-    if (memories.contains(topic)) {
-      // Extract relevant lines
-      final lines = memories.split('\n').where((l) => l.contains(topic)).take(3);
-      return lines.isNotEmpty
-          ? '이전에 $topic에 대해 말씀하신 내용이 있어요:\n${lines.join('\n')}'
-          : '';
+  // ─── Statistics ────────────────────────────────
+
+  /// Session summary
+  Map<String, dynamic> get stats {
+    final recent = _history.where((e) =>
+      e.time.isAfter(DateTime.now().subtract(const Duration(hours: 24)))).toList();
+    final bySubject = <String, int>{};
+    for (final e in recent) {
+      bySubject[e.subject] = (bySubject[e.subject] ?? 0) + 1;
     }
-    return '';
+    return {
+      'today': recent.length,
+      'bySubject': bySubject,
+      'subjects': _subjects.map((s) => {
+        'subject': s,
+        'accuracy': _fsrs.accuracy(s),
+        'interest': _fsrs.interestWeight(s),
+        'interval': _fsrs.intervalMultiplier(s),
+        'retention': _fsrs.desiredRetention(s),
+        'avgResponseMs': _fsrs.avgResponseMs(s),
+        'deckSize': CardFactory.deckSize(s),
+        'useFSRS': _content.useFSRS(s),
+      }).toList(),
+      'priority': _fsrs.prioritySubjects(),
+    };
   }
 
-  // ─── Smart card generation ─────────────────────
+  // ─── LLM Context Builder ───────────────────────
 
-  /// Generate a context-aware card statement
-  Future<String> generateCard() async {
-    // 1. Check if any subject needs review
-    for (final subj in _subjects.keys) {
-      final due = _subjects[subj]!.dueCount;
-      if (due > 0) {
-        return '$subj 복습 카드가 $due장 있어요. 지금 하실래요?';
+  /// Build a prompt for the LLM to analyze and suggest upgrades
+  String buildLLMContext() {
+    final s = stats;
+    final buf = StringBuffer();
+
+    buf.writeln('## User Learning Profile');
+    buf.writeln('Total cards today: ${s['today']}');
+    buf.writeln();
+
+    buf.writeln('| Subject | Accuracy | Interest | Interval | Cards | FSRS |');
+    buf.writeln('|---------|----------|----------|----------|-------|------|');
+    for (final sub in (s['subjects'] as List)) {
+      buf.writeln('| ${sub['subject']} | ${(sub['accuracy']*100).round()}% | '
+          '${sub['interest'].toStringAsFixed(1)} | '
+          '${sub['interval'].toStringAsFixed(1)}x | '
+          '${sub['deckSize']} | ${sub['useFSRS'] ? 'O' : 'X'} |');
+    }
+    buf.writeln();
+
+    buf.writeln('## Priority: ${(s['priority'] as List).join(' > ')}');
+    buf.writeln();
+
+    buf.writeln('## Analysis Tasks:');
+    buf.writeln('1. Which subjects need more cards?');
+    buf.writeln('2. Which subjects should adjust retention?');
+    buf.writeln('3. Is the user bored or frustrated?');
+    buf.writeln('4. Suggest 3 new content ideas.');
+    buf.writeln();
+    buf.writeln('Respond in JSON: {"adjustments": [{"subject":"","action":"","value":0}], "newCards": [{"subject":"","cards":[]}], "insight": ""}');
+
+    return buf.toString();
+  }
+
+  // ─── LLM Feedback → Apply ──────────────────────
+
+  /// Apply LLM's suggestions
+  void applyAdjustments(Map<String, dynamic> json) {
+    // Example: {"adjustments": [{"subject":"영어","action":"moreCards","value":50}]}
+    // This would trigger CardFactory.generateFromLLM()
+    if (json['newCards'] is List) {
+      for (final nc in json['newCards']) {
+        final subject = nc['subject'] as String;
+        final cards = (nc['cards'] as List).cast<String>();
+        _content.addNewCards(subject, cards);
       }
     }
-
-    // 2. Check interest profile
-    final profile = _interest.profile;
-    if (profile.contains('영어') && _interest.learningNudge != null) {
-      return _interest.learningNudge!;
-    }
-
-    // 3. Check humor
-    if (_interest.humorCard != null) return _interest.humorCard!;
-
-    // 4. Check profile gaps
-    final gap = _interest.getProfileCard();
-    if (gap != null) return gap;
-
-    // 5. Default
-    return '새로운 것을 알려드릴까요?';
   }
 
-  // ─── Record and learn ──────────────────────────
+  // ─── Subject suggestion ────────────────────────
 
-  Future<void> onCardResponse(String statement, int confidence) async {
-    // Log to vault
-    await _vault.logCardResponse(statement, confidence);
+  static const _subjects = ['영어','영어듣기','신조어','수학','상식','유머','뉴스','팔로우'];
 
-    // Update interest profile
-    if (statement.contains('영어')) {
-      _interest.recordInterest('영어', confidence >= 1);
-      if (confidence >= 1) _interest.recordLearningStart();
+  /// What subject should the user try next?
+  String suggestNextSubject() {
+    final priority = _fsrs.prioritySubjects();
+    // Find the highest priority subject with cards available
+    for (final s in priority) {
+      if (CardFactory.deckSize(s) > 0) return s;
     }
-    if (statement.contains('유머') || statement.contains('재미')) {
-      _interest.recordHumorReaction(confidence >= 1);
-    }
-
-    // Update memory fact if strong signal
-    if (confidence >= 2) {
-      await _vault.writeMemory('preferences', '사용자가 "$statement"에 ○를 눌렀습니다.');
-    }
+    return '영어';
   }
 
-  // ─── Subject management ────────────────────────
-
-  FSRSBridge getSubject(String subject) {
-    return _subjects.putIfAbsent(subject,
-        () => FSRSBridge(userId: 'default', subject: subject));
+  /// Is user bored? (high accuracy, fast responses → need new content)
+  bool get isBored {
+    final eng = _fsrs.accuracy('영어');
+    final avg = _fsrs.avgResponseMs('영어');
+    return eng > 0.85 && avg < 500;
   }
 
-  // ─── LLM context builder ───────────────────────
-
-  Future<String> getLLMContext() async {
-    final vault = await _vault.buildLLMContext();
-    final interests = _interest.profile;
-    final subjects = _subjects.entries
-        .map((e) => e.value.stats)
-        .join('\n');
-    return '''
-$vault
-
-## 관심사 프로필
-$interests
-
-## 학습 현황
-$subjects
-''';
+  /// Is user struggling? (low accuracy → need easier content)
+  bool get isStruggling {
+    final eng = _fsrs.accuracy('영어');
+    return eng < 0.4 && _history.length > 20;
   }
 
-  // ─── Stats ─────────────────────────────────────
+  /// Should we introduce a new subject?
+  String? get newSubjectToIntroduce {
+    final tried = _history.map((e) => e.subject).toSet();
+    for (final s in _subjects) {
+      if (!tried.contains(s) && CardFactory.deckSize(s) > 0) return s;
+    }
+    return null;
+  }
+}
 
-  String get stats => '''
-TikiTaka Brain 상태:
-저장소: ${_initialized ? "활성" : "미초기화"}
-관심사: ${_interest.topInterests.length}개 파악
-학습 과목: ${_subjects.length}개
-''';
+class _LogEntry {
+  final DateTime time;
+  final String subject;
+  final bool known;
+  final int? responseMs;
+  const _LogEntry({
+    required this.time, required this.subject,
+    required this.known, this.responseMs,
+  });
 }

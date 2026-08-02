@@ -5,7 +5,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:http/http.dart' as http;
 import 'services/adaptive_fsrs.dart';
+import 'services/content_fsrs.dart';
 import 'services/card_factory.dart';
+import 'services/tikitaka_brain.dart';
 
 void main() => runApp(const TikiTakaApp());
 
@@ -24,7 +26,7 @@ class Home extends StatefulWidget { const Home({super.key}); @override State<Hom
 class _HomeState extends State<Home> {
   final _rng = Random(), _cmdCtrl = TextEditingController();
   late FlutterTts _tts;
-  final _fsrs = AdaptiveFSRS();
+  final _brain = TikiTakaBrain();
   final List<String> _following = [], _queue = [];
   int _qIdx = 0;
   String _subject = '영어';
@@ -121,12 +123,12 @@ class _HomeState extends State<Home> {
 
   void _onO() {
     if(_cmdMode) { _cmdO(); return; }
-    if(_isBack){_pong();_fsrs.record(_subject,true);_next();return;}
+    if(_isBack){_pong();_brain.recordCard(subject:_subject,known:true);_next();return;}
     _pong();_isBack=true;_goodCount++;_speakB();setState((){});
   }
   void _onX() {
     if(_cmdMode){_isBack=false;_cmdPending='';_cmdMode=false;_cmdCtrl.clear();_pong();setState((){});return;}
-    if(_isBack){_pong();_fsrs.record(_subject,false);_next();return;}
+    if(_isBack){_pong();_brain.recordCard(subject:_subject,known:false);_next();return;}
     _pong();_isBack=true;_speakB();setState((){});
   }
   void _cmdO() {
