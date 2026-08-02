@@ -63,7 +63,8 @@ class _HomeState extends State<Home> {
     await _tts.setSpeechRate(0.45);
     await _tts.setPitch(1.0);
     await _tts.setVolume(1.0);
-    _ttsReady = true;
+        await _tts.setVoice({'name': 'ko-kr-x-kod-local'}); // female
+        _ttsReady = true;
   }
 
   void _load(String s) {
@@ -107,7 +108,23 @@ class _HomeState extends State<Home> {
   String _front() { if(_subject=='영어듣기') return '🔊 소리만 들으세요.\n의미 생각하지 말고\n귀만 열어두세요.'; return _cur.contains(' ')?_cur.split(' ').first:_cur; }
   String _back() { if(_subject=='영어듣기') return _cur; return _cur.contains(' ')?_cur.substring(_cur.indexOf(' ')+1):_cur; }
 
-  void _ping() { if(!_soundOn)return; HapticFeedback.lightImpact(); SystemSound.play(SystemSoundType.click); }
+  bool _maleVoice = false; // false=female (default)
+
+  // ─── 🏓 LOUD ping-pong ────────────────────────
+
+  void _pong() {
+    if (!_soundOn) return;
+    // Heavy haptic + rapid double-click for audible ping-pong
+    HapticFeedback.heavyImpact();
+    SystemSound.play(SystemSoundType.click);
+    Future.delayed(const Duration(milliseconds: 80), () {
+      HapticFeedback.mediumImpact();
+      SystemSound.play(SystemSoundType.alert);
+    });
+    Future.delayed(const Duration(milliseconds: 160), () {
+      SystemSound.play(SystemSoundType.click);
+    });
+  }
 
   Future<void> _speakF() async {
     if(!_soundOn||!_ttsReady||_cmdMode)return;
@@ -124,28 +141,30 @@ class _HomeState extends State<Home> {
 
   void _onO() {
     if(_cmdMode) {
-      if(!_isBack){_isBack=true;_ping();setState((){});return;}
-      _ping();_tts.stop();if(_cmdPending.isNotEmpty)_load(_cmdPending);else _load(_subject);
+      if(!_isBack){_isBack=true;_pong();setState((){});return;}
+      _pong();_tts.stop();if(_cmdPending.isNotEmpty)_load(_cmdPending);else _load(_subject);
       _cmdMode=false;_cmdPending='';_cmdCtrl.clear();setState((){});return;
     }
-    if(_isBack){_ping();_next();return;}
-    _ping();_isBack=true;_goodCount++;_speakB();setState((){});
+    if(_isBack){_pong();_next();return;}
+    _pong();_isBack=true;_goodCount++;_speakB();setState((){});
   }
   void _onX() {
-    if(_cmdMode){_isBack=false;_cmdPending='';_cmdMode=false;_cmdCtrl.clear();_ping();setState((){});return;}
-    if(_isBack){_ping();_next();return;}
-    _ping();_isBack=true;_speakB();setState((){});
+    if(_cmdMode){_isBack=false;_cmdPending='';_cmdMode=false;_cmdCtrl.clear();_pong();setState((){});return;}
+    if(_isBack){_pong();_next();return;}
+    _pong();_isBack=true;_speakB();setState((){});
   }
   void _toggleCmd(){_cmdMode=!_cmdMode;_isBack=false;_cmdPending='';_cmdCtrl.clear();_tts.stop();setState((){});}
-  void _selectSubject(String s){_cmdPending=s;_isBack=true;_ping();setState((){});}
+  void _selectSubject(String s){_cmdPending=s;_isBack=true;_pong();setState((){});}
   void _submitText(){
     final r=_cmdCtrl.text.trim();if(r.isEmpty)return;_cmdCtrl.clear();
     if(r.contains('팔로우')){final n=r.replaceAll('팔로우','').trim();if(n.isNotEmpty)_following.add(n);_cmdPending='팔로우';}
     else if(r.contains('소리 꺼')){_soundOn=false;_tts.stop();_cmdPending='영어';}
+    else if(r.contains('여자 목소리')||r.contains('여성')){_maleVoice=false;_tts.setVoice({'name':'ko-kr-x-kod-local'});_cmdPending='영어';}
+    else if(r.contains('남자 목소리')||r.contains('남성')){_maleVoice=true;_tts.setVoice({'name':'ko-kr-x-kom-local'});_cmdPending='영어';}
     else if(r.contains('소리 켜')){_soundOn=true;_cmdPending='영어';}
     else if(_subjects.any((s)=>r.contains(s)))_cmdPending=_subjects.firstWhere((s)=>r.contains(s));
     else _cmdPending=r;
-    _isBack=true;_ping();setState((){});
+    _isBack=true;_pong();setState((){});
   }
 
   @override Widget build(_) => Scaffold(body: SafeArea(child: Stack(children: [
@@ -170,13 +189,13 @@ class _HomeState extends State<Home> {
     Positioned(left:_xO,bottom:100+_yO,child:GestureDetector(onPanUpdate:(d)=>setState((){_xO+=d.delta.dx;_yO-=d.delta.dy;}),child:_btnBig('○',Color(0xFFD4A574),_onO))),
   ])));
 
-  Widget _btnBig(String s,Color c,VoidCallback fn)=>GestureDetector(onTap:fn,child:Container(width:60,height:60,
-    decoration:BoxDecoration(shape:BoxShape.circle,color:c.withAlpha(25),border:Border.all(color:c.withAlpha(60),width:2)),
-    child:Center(child:Text(s,style:TextStyle(color:c,fontSize:28,fontWeight:FontWeight.w300)))));
+  Widget _btnBig(String s,Color c,VoidCallback fn)=>GestureDetector(onTap:fn,child:Container(width:72,height:72,
+      decoration:BoxDecoration(shape:BoxShape.circle,color:c.withAlpha(25),border:Border.all(color:c.withAlpha(60),width:2.5)),
+      child:Center(child:Text(s,style:TextStyle(color:c,fontSize:36,fontWeight:FontWeight.w200)))));
 
-  Widget _btnTri(VoidCallback fn)=>GestureDetector(onTap:fn,child:Container(width:48,height:48,
-    decoration:BoxDecoration(shape:BoxShape.circle,color:_cmdMode?Color(0xFFD4A574).withAlpha(25):Colors.white.withAlpha(8),border:Border.all(color:_cmdMode?Color(0xFFD4A574).withAlpha(50):Colors.white.withAlpha(15))),
-    child:Center(child:Text('▲',style:TextStyle(color:_cmdMode?Color(0xFFD4A574):Colors.white30,fontSize:22)))));
+  Widget _btnTri(VoidCallback fn)=>GestureDetector(onTap:fn,child:Container(width:56,height:56,
+      decoration:BoxDecoration(shape:BoxShape.circle,color:_cmdMode?Color(0xFFD4A574).withAlpha(25):Colors.white.withAlpha(8),border:Border.all(color:_cmdMode?Color(0xFFD4A574).withAlpha(50):Colors.white.withAlpha(15))),
+      child:Center(child:Text('▲',style:TextStyle(color:_cmdMode?Color(0xFFD4A574):Colors.white30,fontSize:28)))));
 
   Widget _cmdCard()=>Container(margin:EdgeInsets.symmetric(horizontal:16),padding:EdgeInsets.all(24),
     decoration:BoxDecoration(gradient:LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:[Color(0xFF1A1A1A),Color(0xFF111111),Color(0xFF0A0A0A)]),
