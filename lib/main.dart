@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'dart:math';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
 
 void main() => runApp(const TikiTakaApp());
 
@@ -18,208 +21,192 @@ class Home extends StatefulWidget { const Home({super.key}); @override State<Hom
 
 class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
-  late Animation<double> _anim;
   final _rng = Random();
 
-  // card state
-  String _front = '', _back = '';
-  bool _isFront = true, _soundOn = true;
-  int _cardNum = 0, _streak = 0, _total = 0, _correct = 0;
+  // Follow list
+  final List<String> _following = [];
+  // News cache
+  List<Map<String,String>> _news = [];
 
-  // leitner boxes
-  final List<String> _box1 = [], _box2 = [], _box3 = [], _box4 = [], _box5 = [];
+  // Card data — single string: "front|back"
+  final List<String> _queue = [];
+  int _qIdx = 0;
   String _subject = '영어';
+  bool _showBack = false;
+  int _cardNum = 0, _goodCount = 0;
+  bool _soundOn = true;
 
-  // history
-  final List<({String f, String b})> _history = [];
-
-  // idle timer
-  Timer? _idle;
-  int _idleCount = 0;
-  static const _fib = [5, 8, 13, 21, 34, 55, 89];
-
-  static const _decks = <String, List<String>>{
-    '영어': ['apple 사과','book 책','cat 고양이','dog 개','elephant 코끼리','flower 꽃','garden 정원','house 집','ice 얼음','jungle 정글','king 왕','lion 사자','moon 달','night 밤','ocean 바다'],
-    '신조어': ['가심비 가격대비심리적만족도','스불재 스스로불러온재앙','중꺾마 중요한건꺾이지않는마음','킹받다 열받다','억텐 억지텐션','점메추 점심메뉴추천','소확행 소소하지만확실한행복'],
-    '수학': ['E=mc² 에너지=질량×빛²','a²+b²=c² 피타고라스정리','F=ma 힘=질량×가속도','π≈3.14 원주율'],
-    '상식': ['한글날 10월9일','독도의날 10월25일','광복절 8월15일','개천절 10월3일'],
-    '유머': ['세상에서가장쉬운AI 이보다더쉬운AI는없다','AI가먼저말걸면 사람은그냥OX','코딩몰라도만드는앱 그게TikiTaka'],
-  };
-  static const _subjects = ['영어','신조어','수학','상식','유머'];
+  // Decks
+  static const _words = ['apple 사과','book 책','cat 고양이','dog 개','elephant 코끼리','flower 꽃','garden 정원','house 집','ice 얼음','jungle 정글','king 왕','lion 사자','moon 달','night 밤','ocean 바다','piano 피아노','queen 여왕','river 강','sun 태양','tree 나무'];
+  static const _slang  = ['가심비 가격대비심리적만족도','스불재 스스로불러온재앙','중꺾마 중요한건꺾이지않는마음','킹받다 열받다','억텐 억지텐션','점메추 점심메뉴추천','소확행 소소하지만확실한행복'];
+  static const _math  = ['E=mc² 에너지=질량×빛²','a²+b²=c² 피타고라스','F=ma 힘=질량×가속도'];
+  static const _facts = ['한글날 10월9일','광복절 8월15일','개천절 10월3일'];
+  static const _subjects = ['영어','신조어','수학','상식','유머','뉴스','팔로우'];
 
   @override void initState() {
     super.initState();
     _ctrl = AnimationController(duration: const Duration(milliseconds: 400), vsync: this);
-    _anim = Tween(begin: 0.0, end: 1.0).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOutBack));
-    _loadSubject('영어');
+    _load('영어');
   }
+  @override void dispose() { _ctrl.dispose(); super.dispose(); }
 
-  void _loadSubject(String s) {
-    _subject = s; _box1.clear();_box2.clear();_box3.clear();_box4.clear();_box5.clear();_cardNum=_streak=_total=_correct=0;
-    for (final item in _decks[s] ?? _decks['영어']!) { _box1.add(item); }
-    _nextCard(); _resetIdle();
-  }
+  // ─── Deck loading ─────────────────────────────
 
-  void _nextCard() {
-    // Leitner: prefer lower boxes
-    final boxes = [_box1, _box2, _box3, _box4, _box5];
-    String? pick;
-    for (int i = 0; i < boxes.length; i++) {
-      if (boxes[i].isNotEmpty && _rng.nextDouble() < 0.7) { pick = boxes[i].removeAt(0); break; }
+  void _load(String s) {
+    _subject = s; _queue.clear(); _qIdx = 0; _cardNum = 0; _showBack = false; _ctrl.reset();
+
+    if (s == '유머') {
+      _queue.addAll(['세상에서 가장 쉬운 AI 이보다 더 쉬운 AI는 없다.','AI가 먼저 말 걸면? 사람은 그냥 ○✕','코딩 몰라도 만드는 앱 그게 바로 TikiTaka']);
+    } else if (s == '뉴스') {
+      _queue.add('뉴스 불러오는 중... 잠시만 기다려주세요.');
+      _fetchNews();
+    } else if (s == '팔로우') {
+      if (_following.isEmpty) _queue.add('아직 팔로우가 없어요. ▲ "손흥민 팔로우"');
+      else for (final f in _following) _queue.add('⭐ $f ${f}님의 최신 소식을 기다리는 중');
+    } else if (s == '신조어') {
+      _queue.addAll(_slang);
+    } else if (s == '수학') {
+      _queue.addAll(_math);
+    } else if (s == '상식') {
+      _queue.addAll(_facts);
+    } else {
+      _queue.addAll(_words);
     }
-    pick ??= (_box1.isNotEmpty) ? _box1.removeAt(0) : '준비중...';
-    final parts = pick.split(' ');
-    _front = parts.first;
-    _back = parts.length > 1 ? parts.sublist(1).join(' ') : pick;
+    _showCurrent();
+  }
 
-    _isFront = true; _cardNum++; _ctrl.reset();
+  void _fetchNews() async {
+    try {
+      final res = await http.get(Uri.parse('https://feeds.bbci.co.uk/news/rss.xml')).timeout(const Duration(seconds: 10));
+      final body = res.body;
+      final regex = RegExp(r'<item>.*?<title>(.*?)</title>.*?<description>(.*?)</description>', dotAll: true);
+      final matches = regex.allMatches(body).take(10).toList();
+      _news.clear();
+      _queue.clear(); _qIdx = 0;
+      for (final m in matches) {
+        final title = m.group(1)?.replaceAll(RegExp(r'<[^>]*>'), '').trim() ?? '';
+        final desc = m.group(2)?.replaceAll(RegExp(r'<[^>]*>'), '').replaceAll('&amp;','&').replaceAll('&lt;','<').replaceAll('&gt;','>').trim() ?? '';
+        _news.add({'title': title, 'desc': desc});
+        _queue.add('$title $desc');
+      }
+    } catch (_) {
+      _queue.clear(); _qIdx = 0;
+      _queue.addAll(['인터넷 연결을 확인해주세요. 뉴스를 불러올 수 없어요.','잠시 후 다시 시도해주세요.']);
+      _news.clear();
+    }
+    if (mounted) setState(() {});
+  }
+
+  void _showCurrent() {
+    if (_queue.isEmpty) { _queue.add('준비 중...'); _qIdx = 0; }
+    _showBack = false; _ctrl.reset();
+    _qIdx = _rng.nextInt(_queue.length);
+    _cardNum++;
     setState(() {});
   }
 
-  void _promote(String item, int box) {
-    final nb = (box + 1).clamp(1, 5);
-    switch (nb) { case 1:_box1.add(item);break;case 2:_box2.add(item);break;case 3:_box3.add(item);break;case 4:_box4.add(item);break;case 5:_box5.add(item);break; }
-  }
-
-  void _demote(String item) { _box1.add(item); }
+  String get _frontText => _current.contains(' ') ? _current.split(' ').first : _current;
+  String get _backText => _current.contains(' ') ? _current.substring(_current.indexOf(' ') + 1) : _current;
+  String get _current => _queue.isNotEmpty ? _queue[_qIdx % _queue.length] : '';
 
   // ─── Actions ──────────────────────────────────
 
-  void _flipToBack() {
-    if (!_isFront) return;
-    _ctrl.forward();
-    _isFront = false; _idleCount = 0;
-    setState(() {}); _resetIdle();
-  }
-
-  void _o() {
-    _idleCount = 0; _resetIdle();
-    if (!_isFront) {
-      // Back: user knows → promote
-      _correct++; _total++; _streak++;
-      _history.add((f: _front, b: _back));
-      _promote('$_front $_back', 1);
-      _nextCard();
-      return;
-    }
-    _flipToBack();
-  }
-
-  void _x() {
-    _idleCount = 0; _resetIdle();
-    if (!_isFront) {
-      // Back: user doesn't know → demote
-      _total++; _streak = 0;
-      _history.add((f: _front, b: _back));
-      _demote('$_front $_back');
-      _nextCard();
-      return;
-    }
-    _flipToBack();
-  }
-
-  void _goBack() {
-    if (_history.isEmpty) return;
-    final prev = _history.removeLast();
-    _front = prev.f; _back = prev.b;
-    _isFront = true; _ctrl.reset();
+  void _flip() {
+    if (_ctrl.isAnimating) return;
+    if (_showBack) { _showCurrent(); return; }
+    if (_soundOn) try { SystemSound.play(SystemSoundType.click); } catch (_) {}
+    _ctrl.forward(); _showBack = true; _goodCount++;
     setState(() {});
   }
 
-  // idle
-  void _resetIdle() {
-    _idle?.cancel();
-    _idle = Timer(Duration(seconds: _fib[_idleCount.clamp(0, _fib.length - 1)]), () {
-      if (!mounted) return;
-      _idleCount++;
-      if (_isFront) { _flipToBack(); _resetIdle(); } else { _nextCard(); _resetIdle(); }
-    });
+  void _skip() {
+    if (_ctrl.isAnimating) return;
+    if (_showBack) { _showCurrent(); return; }
+    if (_soundOn) try { SystemSound.play(SystemSoundType.alert); } catch (_) {}
+    _ctrl.forward(); _showBack = true;
+    setState(() {});
   }
 
-  // ▲
-  void _showRequest() {
+  void _request() {
     final c = TextEditingController();
-    showGeneralDialog(context: context, barrierDismissible: true, barrierLabel: '', barrierColor: Colors.black87,
-      pageBuilder: (_,__,___) => const SizedBox(),
-      transitionBuilder: (ctx, anim, _, __) => FadeTransition(opacity: anim, child: Center(child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 20), padding: const EdgeInsets.all(28),
-        decoration: BoxDecoration(gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
-            colors: [Color(0xFF1E1E1E), Color(0xFF141414), Color(0xFF0D0D0D)]),
-          borderRadius: BorderRadius.circular(24), border: Border.all(color: const Color(0xFFD4A574).withAlpha(40)),
-          boxShadow: [BoxShadow(color: Colors.black.withAlpha(180), blurRadius: 30, offset: const Offset(0, 12))]),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Text('무엇을 요청하실래요?', style: TextStyle(color: Color(0xFFD4A574), fontSize: 18, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 20),
-          TextField(controller: c, autofocus: true, style: const TextStyle(color: Colors.white, fontSize: 16),
-            textAlign: TextAlign.center, decoration: const InputDecoration(border: InputBorder.none,
-              hintText: '"소리 꺼줘" "뉴스" "수학"', hintStyle: TextStyle(color: Colors.white24, fontSize: 14))),
-          const SizedBox(height: 20),
-          Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-            _rBtn('✕ 취소', const Color(0xFF8B4242), () => Navigator.pop(ctx)),
-            const SizedBox(width: 16),
-            _rBtn('○ 전송', const Color(0xFFD4A574), () {
-              final r = c.text; Navigator.pop(ctx);
-              if (r.contains('소리 꺼')) _soundOn = false;
-              else if (r.contains('소리 켜')) _soundOn = true;
-              else if (_subjects.any((s) => r.contains(s))) _loadSubject(_subjects.firstWhere((s) => r.contains(s)));
-            }),
-          ]),
-        ])))));
+    showDialog(context: context, builder: (ctx) => AlertDialog(
+      backgroundColor: const Color(0xFF1A1A1A),
+      title: const Text('요청하기', style: TextStyle(color: Color(0xFFD4A574))),
+      content: TextField(controller: c, autofocus: true, style: const TextStyle(color: Colors.white),
+        decoration: const InputDecoration(hintText: '"뉴스" "영어" "소리 꺼줘"', hintStyle: TextStyle(color: Colors.white24))),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('취소', style: TextStyle(color: Colors.white38))),
+        TextButton(onPressed: () {
+          Navigator.pop(ctx);
+          final r = c.text;
+          if (r.contains('뉴스')) _load('뉴스');
+          else if (r.contains('팔로우')) { _following.add(r.replaceAll('팔로우','').trim()); _load('팔로우'); }
+          else if (r.contains('소리 꺼')) { _soundOn = false; _load('유머'); }
+          else if (r.contains('소리 켜')) { _soundOn = true; _load('유머'); }
+          else if (_subjects.any((s) => r.contains(s))) _load(_subjects.firstWhere((s) => r.contains(s)));
+          else _load(_subject);
+        }, child: const Text('전송', style: TextStyle(color: Color(0xFFD4A574)))),
+      ],
+    ));
   }
 
-  Widget _rBtn(String l, Color c, VoidCallback f) => GestureDetector(
-    onTap: f,
-    child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      decoration: BoxDecoration(borderRadius: BorderRadius.circular(12),
-        color: c.withAlpha(15), border: Border.all(color: c.withAlpha(40))),
-      child: Text(l, style: TextStyle(color: c, fontSize: 14)),
-    ),
-  );
-
-  @override void dispose() { _idle?.cancel(); _ctrl.dispose(); super.dispose(); }
+  // ─── UI ───────────────────────────────────────
 
   @override Widget build(_) => Scaffold(body: SafeArea(child: Column(children: [
-    Padding(padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+    Container(padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
       child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
         const Text('🃏 TikiTaka', style: TextStyle(color: Color(0xFFD4A574), fontSize: 16, fontWeight: FontWeight.w700)),
-        Text('#$_cardNum ✅$_correct/$_total', style: const TextStyle(color: Colors.white24, fontSize: 13)),
+        Text(_soundOn ? '$_goodCount장' : '$_goodCount장 🔇', style: const TextStyle(color: Colors.white24, fontSize: 13)),
       ])),
 
     Expanded(child: Center(child: GestureDetector(
-      onHorizontalDragEnd: (d) { if (d.primaryVelocity != null && d.primaryVelocity! < -300) _goBack(); },
-      child: AnimatedBuilder(animation: _anim, builder: (_, __) => Transform(alignment: Alignment.center,
-        transform: Matrix4.identity()..setEntry(3, 2, 0.001)..rotateX(_anim.value * 3.14159),
-        child: _anim.value < 0.5
-            ? _card(_front, false)
-            : Transform(alignment: Alignment.center, transform: Matrix4.identity()..rotateX(3.14159), child: _card(_back, true))))))),
+      onTap: _flip,
+      child: AnimatedBuilder(animation: _ctrl,
+        builder: (_, child) => Transform(alignment: Alignment.center,
+          transform: Matrix4.identity()..setEntry(3, 2, 0.001)..rotateX(_ctrl.value * 3.14159),
+          child: _ctrl.value < 0.5
+              ? _card(_showBack ? _backText : _frontText, false)
+              : Transform(alignment: Alignment.center, transform: Matrix4.identity()..rotateX(3.14159),
+                  child: _card(_backText, true)),
+        )),
+    ))),
 
     Container(decoration: BoxDecoration(border: Border(top: BorderSide(color: Colors.white.withAlpha(6)))),
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
       child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        _btn('✕', const Color(0xFF8B4242), _x),
-        GestureDetector(onTap: _showRequest, child: Container(width: 40, height: 40, decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withAlpha(5), border: Border.all(color: Colors.white.withAlpha(10))),
+        GestureDetector(onTap: _skip, child: Container(width: 64, height: 48,
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(14), color: const Color(0xFF8B4242).withAlpha(12), border: Border.all(color: const Color(0xFF8B4242).withAlpha(30))),
+          child: const Center(child: Text('✕', style: TextStyle(color: Color(0xFF8B4242), fontSize: 24))))),
+        GestureDetector(onTap: _request, child: Container(width: 40, height: 40,
+          decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withAlpha(5), border: Border.all(color: Colors.white.withAlpha(10))),
           child: const Center(child: Text('▲', style: TextStyle(color: Colors.white24, fontSize: 16))))),
-        _btn('Ｏ', const Color(0xFFD4A574), _o),
+        GestureDetector(onTap: _flip, child: Container(width: 64, height: 48,
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(14), color: const Color(0xFFD4A574).withAlpha(12), border: Border.all(color: const Color(0xFFD4A574).withAlpha(30))),
+          child: const Center(child: Text('○', style: TextStyle(color: Color(0xFFD4A574), fontSize: 24))))),
       ])),
 
-    Padding(padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+    Padding(padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
       child: SizedBox(height: 32, child: ListView(scrollDirection: Axis.horizontal,
-        children: _subjects.map((s) => Padding(padding: const EdgeInsets.symmetric(horizontal: 4),
+        children: _subjects.map((s) => Padding(padding: const EdgeInsets.symmetric(horizontal: 3),
           child: ActionChip(label: Text(s, style: TextStyle(color: _subject == s ? Colors.white : Colors.white38, fontSize: 11)),
             backgroundColor: _subject == s ? const Color(0xFFD4A574).withAlpha(30) : const Color(0xFF141414),
             side: BorderSide(color: Colors.white.withAlpha(_subject == s ? 25 : 8)),
-            onPressed: () => _loadSubject(s)))).toList())),
+            onPressed: () => _load(s)))).toList())),
     ),
   ])));
 
-  Widget _card(String t, bool b) => Container(margin: const EdgeInsets.symmetric(horizontal: 16),
-    padding: const EdgeInsets.all(28), decoration: BoxDecoration(gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF1A1A1A), Color(0xFF111111), Color(0xFF0A0A0A)]),
-      borderRadius: BorderRadius.circular(24), border: Border.all(color: b ? Colors.white.withAlpha(12) : const Color(0xFFD4A574).withAlpha(30)),
-      boxShadow: [BoxShadow(color: Colors.black.withAlpha(160), blurRadius: 24, offset: const Offset(0, 8))]),
-    child: Center(child: Text(t, textAlign: TextAlign.center, style: TextStyle(color: b ? Colors.white54 : Colors.white, fontSize: 28, fontWeight: FontWeight.w600, height: 1.5))));
-
-  Widget _btn(String s, Color c, VoidCallback f) => GestureDetector(onTap: f,
-    child: Container(width: 64, height: 48, decoration: BoxDecoration(borderRadius: BorderRadius.circular(14), color: c.withAlpha(12), border: Border.all(color: c.withAlpha(30))),
-      child: Center(child: Text(s, style: TextStyle(color: c.withAlpha(220), fontSize: 26)))));
+  Widget _card(String text, bool isBack) => Container(
+    margin: const EdgeInsets.symmetric(horizontal: 16),
+    padding: const EdgeInsets.all(28),
+    decoration: BoxDecoration(
+      gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
+          colors: [Color(0xFF1A1A1A), Color(0xFF111111), Color(0xFF0A0A0A)]),
+      borderRadius: BorderRadius.circular(24),
+      border: Border.all(color: isBack ? Colors.white.withAlpha(12) : const Color(0xFFD4A574).withAlpha(30)),
+      boxShadow: [BoxShadow(color: Colors.black.withAlpha(160), blurRadius: 24, offset: const Offset(0, 8))],
+    ),
+    child: Center(child: Text(text, textAlign: TextAlign.center,
+        style: TextStyle(color: isBack ? Colors.white54 : Colors.white,
+            fontSize: isBack ? 20 : 28, fontWeight: isBack ? FontWeight.w400 : FontWeight.w600, height: 1.5))),
+  );
 }
