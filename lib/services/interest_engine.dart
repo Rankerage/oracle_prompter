@@ -21,7 +21,7 @@ class InterestEngine {
   /// Mix a profile question into the card flow (1 in 15 cards)
   String? getProfileCard() {
     // Pick the most uncertain interest
-    if (_interests.isEmpty) return ProfileChip.values.first.statement;
+    if (_interests.isEmpty) return null;
     final leastKnown = _interests.entries
         .where((e) => e.value < 0.3)
         .toList();
