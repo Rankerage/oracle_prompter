@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:http/http.dart' as http;
 import 'services/adaptive_fsrs.dart';
+import 'services/card_factory.dart';
 
 void main() => runApp(const TikiTakaApp());
 
@@ -36,41 +37,6 @@ class _HomeState extends State<Home> {
   String _frontVoice = 'en-us-x-tpf-local'; // male
   String _backVoice = 'en-us-x-tpf-local';  // female
 
-  // ─── Built-in Decks ────────────────────────────
-
-  static const _words = [
-    'apple 사과','book 책','cat 고양이','dog 개','elephant 코끼리',
-    'flower 꽃','garden 정원','house 집','ice 얼음','jungle 정글',
-    'king 왕','lion 사자','moon 달','night 밤','ocean 바다',
-    'piano 피아노','queen 여왕','river 강','sun 태양','tree 나무',
-    'window 창문','water 물','fire 불','wind 바람','star 별',
-  ];
-  static const _slang = [
-    '가심비 가격대비심리적만족도','스불재 스스로불러온재앙','중꺾마 꺾이지않는마음',
-    '킹받다 열받다','억텐 억지텐션','점메추 점심메뉴추천','소확행 소확행',
-    '혼밥 혼자밥먹기','혼술 혼자술마시기','플렉스 과시하기',
-  ];
-  static const _math = [
-    'E=mc² 에너지=질량×빛²','a²+b²=c² 피타고라스정리','F=ma 뉴턴제2법칙',
-    'π≈3.14159 원주율','√-1=i 허수단위','e≈2.718 자연상수',
-  ];
-  static const _facts = [
-    '한글날 10월9일','광복절 8월15일','개천절 10월3일',
-    '세계물의날 3월22일','지구의날 4월22일','세계환경의날 6월5일',
-  ];
-  static const _listening = [
-    'The weather is beautiful today.','Could you help me please?',
-    'I would like a cup of coffee.','Where is the nearest station?',
-    'What time does it start?','How much does this cost?',
-    'Nice to meet you.','See you tomorrow.',
-    'Would you like to join us?','I have been waiting for an hour.',
-    'She goes to school every day.','He plays soccer on weekends.',
-  ];
-  static const _humor = [
-    '세상에서가장쉬운AI 이보다쉬운AI는없다','AI먼저말걸면 사람은그냥OX',
-    '코딩1도모르고만든앱 그게TikiTaka','사용법3초 OX면끝',
-  ];
-
   static const _subjects = ['영어','영어듣기','신조어','수학','상식','유머','뉴스','팔로우'];
   static const _colors = [Color(0xFF2D1B69),Color(0xFF1B3A5C),Color(0xFF3D1A1A),Color(0xFF1A3D2E),Color(0xFF3D2D1A)];
   Color get _color => _colors[_cardNum % _colors.length];
@@ -90,16 +56,9 @@ class _HomeState extends State<Home> {
 
   void _load(String s) {
     _subject = s; _queue.clear(); _qIdx = 0; _cardNum = 0; _isBack = false;
-    switch (s) {
-      case '영어듣기': _queue.addAll(_listening); break;
-      case '유머': _queue.addAll(_humor); break;
-      case '뉴스': _queue.add('로딩...'); _fetchNews(); break;
-      case '팔로우': if(_following.isEmpty)_queue.add('팔로우없음 ▲명령'); else for(final f in _following)_queue.add('⭐$f $f님 소식'); break;
-      case '신조어': _queue.addAll(_slang); break;
-      case '수학': _queue.addAll(_math); break;
-      case '상식': _queue.addAll(_facts); break;
-      default: _queue.addAll(_words);
-    }
+    if (s == '뉴스') { _queue.add('로딩...'); _fetchNews(); }
+    else if (s == '팔로우') { if(_following.isEmpty)_queue.add('팔로우없음 ▲명령'); else for(final f in _following)_queue.add('⭐$f $f님 소식'); }
+    else { _queue.addAll(CardFactory.deckFor(s)); }
     _next();
   }
 
