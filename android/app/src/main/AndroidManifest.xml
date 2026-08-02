@@ -62,7 +62,7 @@
     <!-- 참고: Google Play 심사 시 정당한 사유를 제출해야 함 -->
 
     <application
-        android:label="OraclePrompter"
+        android:label="TikiTaka"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:requestLegacyExternalStorage="true">
