@@ -43,14 +43,16 @@ class _HomeState extends State<Home> {
   
   // 🔊 Listening content
   static const _listening = [
-    'The weather is beautiful today. 오늘 날씨가 정말 좋아요.',
-    'Could you help me please? 저를 좀 도와주실 수 있나요?',
-    'I would like a cup of coffee. 커피 한 잔 주세요.',
-    'Where is the nearest station? 가장 가까운 역이 어디인가요?',
-    'What time does it start? 몇 시에 시작하나요?',
-    'How much does this cost? 이거 얼마인가요?',
-    'Nice to meet you. 만나서 반갑습니다.',
-    'See you tomorrow. 내일 봐요.',
+    'The weather is beautiful today.',
+    'Could you help me please?',
+    'I would like a cup of coffee.',
+    'Where is the nearest station?',
+    'What time does it start?',
+    'How much does this cost?',
+    'Nice to meet you.',
+    'See you tomorrow.',
+    'Would you like to join us?',
+    'I have been waiting for an hour.',
   ];
 
   Color get _color => _colors[_cardNum % _colors.length];
@@ -105,8 +107,14 @@ class _HomeState extends State<Home> {
 
   void _next() { if(_queue.isEmpty)_queue.add('...'); _isBack=false; _qIdx=_rng.nextInt(_queue.length); _cardNum++; _speakF(); setState((){}); }
   String get _cur => _queue.isNotEmpty?_queue[_qIdx%_queue.length]:'';
-  String _front() { if(_subject=='영어듣기') return '🔊 소리만 들으세요.\n의미 생각하지 말고\n귀만 열어두세요.'; return _cur.contains(' ')?_cur.split(' ').first:_cur; }
-  String _back() { if(_subject=='영어듣기') return _cur; return _cur.contains(' ')?_cur.substring(_cur.indexOf(' ')+1):_cur; }
+  String _front() {
+    if(_subject=='영어듣기') return '절대로 의미를 생각하지 마시고\n소리에만 집중하세요!';
+    return _cur.contains(' ')?_cur.split(' ').first:_cur;
+  }
+  String _back() {
+    if(_subject=='영어듣기') return _cur; // English text only, no Korean
+    return _cur.contains(' ')?_cur.substring(_cur.indexOf(' ')+1):_cur;
+  }
 
   bool _maleVoice = false; // false=female (default)
 
@@ -129,14 +137,20 @@ class _HomeState extends State<Home> {
   Future<void> _speakF() async {
     if(!_soundOn||!_ttsReady||_cmdMode)return;
     await _tts.stop();
-    if(_subject=='영어'||_subject=='영어듣기') await _tts.setLanguage('en-US'); else await _tts.setLanguage('ko-KR');
-    if(_subject=='영어듣기') await _tts.speak(_cur.split(' ').first); else await _tts.speak(_front());
+    if(_subject=='영어'||_subject=='영어듣기') await _tts.setLanguage('en-US');
+    else await _tts.setLanguage('ko-KR');
+    // 영어듣기: speak the English sentence (front is hidden)
+    if(_subject=='영어듣기') await _tts.speak(_cur);
+    else await _tts.speak(_front());
   }
   Future<void> _speakB() async {
     if(!_soundOn||!_ttsReady||_cmdMode)return;
     await _tts.stop();
-    if(_subject=='영어'||_subject=='영어듣기') await _tts.setLanguage('ko-KR'); else await _tts.setLanguage('ko-KR');
-    if(_subject=='영어듣기') await _tts.speak(_cur); else await _tts.speak(_back());
+    if(_subject=='영어'||_subject=='영어듣기') await _tts.setLanguage('en-US');
+    else await _tts.setLanguage('ko-KR');
+    // 영어듣기 back: speak English sentence again
+    if(_subject=='영어듣기') await _tts.speak(_cur);
+    else await _tts.speak(_back());
   }
 
   void _onO() {
