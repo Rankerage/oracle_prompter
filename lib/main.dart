@@ -9,6 +9,7 @@ import 'services/content_fsrs.dart';
 import 'services/card_factory.dart';
 import 'services/tikitaka_brain.dart';
 import 'services/card_pool.dart';
+import 'services/volume_ox.dart';
 
 void main() => runApp(const TikiTakaApp());
 
@@ -45,7 +46,12 @@ class _HomeState extends State<Home> {
   static const _colors = [Color(0xFF2D1B69),Color(0xFF1B3A5C),Color(0xFF3D1A1A),Color(0xFF1A3D2E),Color(0xFF3D2D1A)];
   Color get _color => _colors[_cardNum % _colors.length];
 
-  @override void initState() { super.initState(); _initTts(); _load('영어'); }
+  @override void initState() {
+    super.initState();
+    _initTts();
+    _load('영어');
+    VolumeOX().enable(onO: _onO, onX: _onX);
+  }
   @override void dispose() { _cmdCtrl.dispose(); _tts.stop(); super.dispose(); }
 
   Future<void> _initTts() async {
