@@ -103,6 +103,37 @@ class CardPool {
   /// Master pool size
   int masterSize(String subject) => _get(subject).master.length;
 
+  // ─── Natural language commands ─────────────────
+
+  /// "너무 쉬워요" — skip mastered, unlock harder
+  void unlockHarder(String subject) {
+    final p = _get(subject);
+    // Unlock a bigger batch
+    final remaining = p.master
+        .where((c) => !p.active.contains(c) && !p.mastered.contains(c))
+        .toList();
+    remaining.shuffle(_rng);
+    p.active.addAll(remaining.take(15)); // bigger jump
+  }
+
+  /// "어려워요" — go back to basics
+  void easierMode(String subject) {
+    final p = _get(subject);
+    // Reset to initial easier cards
+    p.active = _pickInitial(p.master, 15);
+    p.mastered.clear();
+  }
+
+  /// "좋아요" — show more of this subject
+  void favorSubject(String subject) {
+    final p = _get(subject);
+    final remaining = p.master
+        .where((c) => !p.active.contains(c) && !p.mastered.contains(c))
+        .toList();
+    remaining.shuffle(_rng);
+    p.active.addAll(remaining.take(10));
+  }
+
   // ─── 🌍 Generate 10x bigger decks ──────────────
 
   /// Expand a deck by generating similar cards from a template

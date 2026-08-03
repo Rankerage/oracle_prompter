@@ -8,6 +8,7 @@ import 'services/adaptive_fsrs.dart';
 import 'services/content_fsrs.dart';
 import 'services/card_factory.dart';
 import 'services/tikitaka_brain.dart';
+import 'services/card_pool.dart';
 
 void main() => runApp(const TikiTakaApp());
 
@@ -27,6 +28,7 @@ class _HomeState extends State<Home> {
   final _rng = Random(), _cmdCtrl = TextEditingController();
   late FlutterTts _tts;
   final _brain = TikiTakaBrain();
+  final _pool = CardPool();
   final List<String> _following = [], _queue = [];
   int _qIdx = 0;
   String _subject = '영어';
@@ -142,14 +144,35 @@ class _HomeState extends State<Home> {
   void _selectSubject(String s){_cmdPending=s;_isBack=true;_pong();setState((){});}
 
   void _submitText() {
-    final r=_cmdCtrl.text.trim(); if(r.isEmpty) return; _cmdCtrl.clear();
-    if(r.contains('팔로우')){ final n=r.replaceAll('팔로우','').trim(); if(n.isNotEmpty)_following.add(n); _cmdPending='팔로우'; }
+    final r=_cmdCtrl.text.trim(); if(r.isEmpty)return; _cmdCtrl.clear();
+    // ─── Natural language feedback ──────────────
+    if (r.contains('너무 쉬')||r.contains('쉬워')||r.contains('easy')) {
+      // Unlock more cards from master pool
+      for (int i = 0; i < 10; i++) _pool.markMastered(_subject, '');
+      _pool.unlockHarder(_subject);
+      _cmdPending = '영어';
+    } else if (r.contains('어려워')||r.contains('너무 어')||r.contains('hard')||r.contains('difficult')) {
+      // Stay at current level, review previous cards
+      _pool.easierMode(_subject);
+      _cmdPending = '영어';
+    } else if (r.contains('지루')||r.contains('boring')||r.contains('재미없')) {
+      // Suggest new subjects
+      final next = _brain.newSubjectToIntroduce ?? '유머';
+      _cmdPending = next;
+    } else if (r.contains('잘해')||r.contains('good')||r.contains('좋아')) {
+      // User likes this subject → show more
+      _pool.favorSubject(_subject);
+      _cmdPending = _subject;
+    }
+    // ─── Voice ──────────────────────────────────
     else if(r.contains('남자')||r.contains('남성')){_frontVoice='en-us-x-tpf-local';_cmdPending='영어';}
     else if(r.contains('여자')||r.contains('여성')){_backVoice='en-us-x-tpf-local';_cmdPending='영어';}
     else if(r.contains('소리 꺼')){_soundOn=false;_tts.stop();_cmdPending='영어';}
     else if(r.contains('소리 켜')){_soundOn=true;_cmdPending='영어';}
+    // ─── Subjects ───────────────────────────────
+    else if(r.contains('팔로우')){ final n=r.replaceAll('팔로우','').trim(); if(n.isNotEmpty)_following.add(n); _cmdPending='팔로우'; }
     else if(_subjects.any((s)=>r.contains(s))) _cmdPending=_subjects.firstWhere((s)=>r.contains(s));
-    else { _cmdPending='__custom__'; } // new content request
+    else { _cmdPending='__custom__'; }
     _isBack=true; _pong(); setState((){});
   }
 

@@ -1,113 +1,138 @@
-import 'dart:io';
-import 'package:path_provider/path_provider.dart';
+import 'dart:math';
+import 'card_factory.dart';
 
-/// 📁 Markdown Vault — Hermes-style knowledge base
+/// 📝 Markdown Vault — LLM이 읽을 수 있는 학습기록
 ///
-/// Structure:
-///   vault/
-///   ├── index.md           → 관문. 모든 파일 링크
-///   ├── memory/            → 선언적 사실만. "사용자는 ~를 선호함"
-///   ├── sessions/          → 일자별 모든 카드 응답 로그
-///   ├── skills/            → .md 워크플로우 파일
-///   └── cron/              → 예정된 작업
-///
-/// AI는 매 세션 시작 시 index.md → 참조 파일들 → 프롬프트 주입
+/// 하루 단위 마크다운 문서로 저장.
+/// LLM이 사용자 패턴을 분석하고 컨텐츠를 생성할 때 참조.
 class MarkdownVault {
   static final MarkdownVault _i = MarkdownVault._();
   factory MarkdownVault() => _i;
   MarkdownVault._();
 
-  late Directory _root;
+  String _today = _dateStr(DateTime.now());
+  final _daily = <String, _DayLog>{};
 
-  Future<void> init() async {
-    final appDir = await getApplicationDocumentsDirectory();
-    _root = Directory('${appDir.path}/vault');
-    await _root.create(recursive: true);
-    await _ensureDirs();
-    await _ensureIndex();
-  }
+  _DayLog _log() => _daily.putIfAbsent(_today, () => _DayLog());
 
-  Future<void> _ensureDirs() async {
-    for (final d in ['memory', 'sessions', 'skills', 'cron']) {
-      await Directory('${_root.path}/$d').create(recursive: true);
+  static String _dateStr(DateTime d) =>
+    '${d.year}-${d.month.toString().padLeft(2,'0')}-${d.day.toString().padLeft(2,'0')}';
+  static String _timeStr(DateTime d) =>
+    '${d.hour.toString().padLeft(2,'0')}:${d.minute.toString().padLeft(2,'0')}';
+
+  // ─── Record ────────────────────────────────────
+
+  void record(String subject, bool known, {int? responseMs}) {
+    final l = _log();
+    l.total++;
+    if (known) l.correct++;
+    if (responseMs != null) {
+      l.totalMs += responseMs;
+      l.countMs++;
     }
+    _today = _dateStr(DateTime.now()); // refresh date
   }
 
-  // ─── index.md — AI의 진입점 ────────────────────
-
-  Future<void> _ensureIndex() async {
-    final file = File('${_root.path}/index.md');
-    if (!await file.exists()) {
-      await file.writeAsString('''# TokTok Vault
-      
-## 📂 구조
-- [[memory/preferences]] — 사용자 선호
-- [[memory/interests]] — 관심사
-- [[memory/learning]] — 학습 프로필
-- [[sessions/]] — 세션 로그
-- [[skills/]] — 학습 스킬
-
-마지막 업데이트: ${DateTime.now().toIso8601String()}
-''');
-    }
+  void recordSubjectChange(String from, String to) {
+    _log().subjectChanges.add('${_timeStr(DateTime.now())} $from → $to');
   }
 
-  // ─── Memory = 선언적 사실만 ────────────────────
+  // ─── Generate Markdown for LLM ─────────────────
 
-  /// Write a memory fact. Format: declarative statement.
-  Future<void> writeMemory(String category, String fact) async {
-    final file = File('${_root.path}/memory/$category.md');
-    final exists = await file.exists();
-    final content = exists ? await file.readAsString() : '# $category\n\n';
-    final timestamp = DateTime.now().toIso8601String().substring(0, 19);
-    await file.writeAsString('$content- [$timestamp] $fact\n');
-  }
-
-  /// Read all memory facts for LLM context
-  Future<String> readMemories() async {
-    final dir = Directory('${_root.path}/memory');
-    if (!await dir.exists()) return '';
+  /// Full learning history as markdown
+  String toMarkdown() {
     final buf = StringBuffer();
-    await for (final f in dir.list()) {
-      if (f is File && f.path.endsWith('.md')) {
-        buf.writeln(await f.readAsString());
-        buf.writeln();
-      }
-    }
-    return buf.toString();
-  }
 
-  // ─── Session = 일자별 카드 응답 ─────────────────
-
-  Future<void> logCardResponse(String statement, int confidence) async {
-    final date = DateTime.now().toIso8601String().substring(0, 10);
-    final file = File('${_root.path}/sessions/$date.md');
-    final exists = await file.exists();
-    final content = exists ? await file.readAsString() : '# $date\n\n';
-    final time = DateTime.now().toIso8601String().substring(11, 19);
-    final emoji = confidence >= 1 ? '○' : '✕';
-    await file.writeAsString('$content- $time $emoji $statement (신뢰: $confidence)\n');
-  }
-
-  /// Read session for a date
-  Future<String> readSession(String date) async {
-    final file = File('${_root.path}/sessions/$date.md');
-    if (!await file.exists()) return '';
-    return file.readAsString();
-  }
-
-  // ─── LLM Context Builder ───────────────────────
-
-  /// Build context block to inject into LLM prompt
-  Future<String> buildLLMContext() async {
-    final buf = StringBuffer();
-    buf.writeln('# 사용자 컨텍스트 (vault 기반)');
+    buf.writeln('# 📊 TikiTaka 학습 기록');
+    buf.writeln('마지막 업데이트: ${_dateStr(DateTime.now())} ${_timeStr(DateTime.now())}');
     buf.writeln();
-    buf.writeln('## 선호·취향');
-    buf.writeln(await readMemories());
-    buf.writeln('## 오늘의 활동');
-    final today = DateTime.now().toIso8601String().substring(0, 10);
-    buf.writeln(await readSession(today));
+
+    if (_daily.isEmpty) {
+      buf.writeln('아직 기록이 없습니다.');
+      return buf.toString();
+    }
+
+    // Summary table
+    buf.writeln('## 📈 전체 요약');
+    buf.writeln();
+    buf.writeln('| 날짜 | 카드 | 정답률 | 평균반응 | 과목 |');
+    buf.writeln('|------|------|--------|----------|------|');
+
+    for (final e in _daily.entries.toList().reversed.take(30)) {
+      final d = e.value;
+      final rate = d.total > 0 ? (d.correct / d.total * 100).round() : 0;
+      final avgMs = d.countMs > 0 ? (d.totalMs / d.countMs).round() : 0;
+      final subjects = d.subjectChanges.isNotEmpty
+          ? d.subjectChanges.last.split(' ').last
+          : '영어';
+      buf.writeln('| ${e.key} | ${d.total} | $rate% | ${avgMs}ms | $subjects |');
+    }
+    buf.writeln();
+
+    // Today detail
+    final today = _daily[_today];
+    if (today != null) {
+      buf.writeln('## 📅 오늘 ($_today)');
+      buf.writeln();
+      buf.writeln('- 총 카드: ${today.total}장');
+      buf.writeln('- 정답: ${today.correct}장');
+      buf.writeln('- 정답률: ${today.total > 0 ? (today.correct / today.total * 100).round() : 0}%');
+      buf.writeln('- 평균 반응 시간: ${today.countMs > 0 ? (today.totalMs / today.countMs).round() : 0}ms');
+      if (today.subjectChanges.isNotEmpty) {
+        buf.writeln('- 과목 이동: ${today.subjectChanges.join(', ')}');
+      }
+      buf.writeln();
+    }
+
+    // Content deck sizes
+    buf.writeln('## 📦 현재 카드 덱');
+    buf.writeln();
+    buf.writeln('| 과목 | 카드 수 | 유형 |');
+    buf.writeln('|------|:---:|------|');
+    for (final s in ['영어','영어듣기','신조어','수학','상식','유머','뉴스']) {
+      buf.writeln('| $s | ${CardFactory.deckSize(s)} | ${_deckType(s)} |');
+    }
+    buf.writeln();
+
+    // Recommendations for LLM
+    buf.writeln('## 🤖 LLM 분석 요청');
+    buf.writeln();
+    buf.writeln('1. 위 통계를 바탕으로 사용자의 학습 패턴을 분석하세요.');
+    buf.writeln('2. 어떤 과목이 너무 쉽거나 어려운가요?');
+    buf.writeln('3. 다음에 추천할 과목은 무엇인가요?');
+    buf.writeln('4. 부족한 카드 덱을 보충할 컨텐츠를 생성하세요.');
+    buf.writeln();
+    buf.writeln('응답 형식: JSON');
+    buf.writeln('```json');
+    buf.writeln('{');
+    buf.writeln('  "analysis": "사용자 패턴 분석",');
+    buf.writeln('  "adjustment": {"subject": "영어", "level": "up|down", "reason": "..."},');
+    buf.writeln('  "newCards": [{"subject": "영어", "cards": ["word meaning", ...]}],');
+    buf.writeln('  "recommend": "다음 추천 과목"');
+    buf.writeln('}');
+    buf.writeln('```');
+
     return buf.toString();
   }
+
+  String _deckType(String s) => switch (s) {
+    '뉴스' => 'RSS 실시간',
+    '유머' => '1회성',
+    '영어듣기' => '청각형',
+    _ => 'FSRS 학습',
+  };
+
+  /// Short summary for daily cron/card generation
+  String dailySummary() {
+    final today = _daily[_today];
+    if (today == null) return '오늘은 아직 학습하지 않았습니다.';
+    final rate = today.total > 0 ? (today.correct / today.total * 100).round() : 0;
+    return '오늘 ${today.total}장 ($rate% 정답). ';
+  }
+}
+
+class _DayLog {
+  int total = 0, correct = 0;
+  int totalMs = 0, countMs = 0;
+  List<String> subjectChanges = [];
 }
