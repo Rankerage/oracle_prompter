@@ -286,6 +286,6 @@ class _HomeState extends State<Home> {
 
   Widget _card(String text,bool isBack)=>Container(margin:EdgeInsets.symmetric(horizontal:16),padding:EdgeInsets.all(28),
     decoration:_cardDeco(_color,isBack?Colors.white.withAlpha(15):_color.withAlpha(100)),
-    child:Center(child:Text(text,textAlign:TextAlign.center,
+    child:SingleChildScrollView(child:Text(text,textAlign:TextAlign.center,
       style:TextStyle(color:isBack?Colors.white70:Colors.white,fontSize:isBack?20:28,fontWeight:isBack?FontWeight.w400:FontWeight.w600,height:1.5))));
 }
