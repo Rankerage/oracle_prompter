@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>TikiTaka Architecture</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0A0A0A;color:#fff;font-family:system-ui;padding:2rem}
+h1{color:#D4A574;text-align:center;margin-bottom:2rem}
+.diagram{max-width:900px;margin:2rem auto;display:flex;flex-wrap:wrap;gap:1rem;justify-content:center}
+.box{background:#141414;border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:1.2rem;text-align:center;min-width:120px}
+.box.core{border-color:rgba(212,165,116,0.4)}
+.box .title{color:#D4A574;font-weight:700;font-size:1.1rem;margin-bottom:.3rem}
+.box .sub{color:#666;font-size:.75rem}
+.arrow{display:flex;align-items:center;color:#444;font-size:1.5rem}
+.column{display:flex;flex-direction:column;gap:.5rem;align-items:center}
+.row{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;justify-content:center}
+.label{color:#555;font-size:.7rem;text-align:center;margin-top:.3rem}
+.flow{display:flex;align-items:center;gap:1rem;justify-content:center;margin:2rem 0;flex-wrap:wrap}
+.flow-box{background:#141414;border:1px solid rgba(212,165,116,0.2);border-radius:12px;padding:1rem 1.5rem;text-align:center}
+.flow-arrow{color:#D4A574;font-size:1.5rem}
+</style></head><body>
+
+<h1>🎯 TikiTaka Architecture</h1>
+
+<div class="diagram">
+  <div class="column">
+    <div class="box core"><div class="title">🃏 카드 인터페이스</div><div class="sub">○ ✕ ▲</div></div>
+    <div class="label">모든 사용자 입력</div>
+  </div>
+  <div class="arrow">→</div>
+  <div class="column">
+    <div class="box core"><div class="title">🪶 HermesBridge</div><div class="sub">의도 파악 + 라우팅</div></div>
+    <div class="label">질문 → 엔진 선택</div>
+  </div>
+  <div class="arrow">→</div>
+  <div class="row">
+    <div class="column"><div class="box"><div class="title">📚 Knowledge</div><div class="sub">영어·수학·상식</div></div></div>
+    <div class="column"><div class="box"><div class="title">🔍 Discovery</div><div class="sub">Syncretia·Hygieia·Clio</div></div></div>
+    <div class="column"><div class="box"><div class="title">📡 Feed</div><div class="sub">뉴스·주식</div></div></div>
+    <div class="column"><div class="box"><div class="title">🧠 Coach</div><div class="sub">조정·인사이트</div></div></div>
+    <div class="column"><div class="box"><div class="title">🧿 Mneme</div><div class="sub">기억·실행</div></div></div>
+  </div>
+</div>
+
+<h2 style="text-align:center;color:#D4A574;margin:3rem 0 1rem">카드 흐름</h2>
+<div class="flow">
+  <div class="flow-box">앞면</div>
+  <div class="flow-arrow">○✕→</div>
+  <div class="flow-box">뒤집기</div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-box">뒷면</div>
+  <div class="flow-arrow">○✕→</div>
+  <div class="flow-box">다음 카드</div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-box">앞면</div>
+</div>
+
+<h2 style="text-align:center;color:#D4A574;margin:3rem 0 1rem">질문 → 엔진</h2>
+<div class="diagram">
+  <div class="column"><div class="box">눈이 아파요</div><div class="label">→ Hygieia</div></div>
+  <div class="column"><div class="box">애플 주가</div><div class="label">→ Plutus</div></div>
+  <div class="column"><div class="box">나는 누구인가</div><div class="label">→ Syncretia</div></div>
+  <div class="column"><div class="box">영어 공부</div><div class="label">→ Knowledge</div></div>
+  <div class="column"><div class="box">오늘 뉴스</div><div class="label">→ Feed</div></div>
+</div>
+
+</body></html>
