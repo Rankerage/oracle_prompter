@@ -1,6 +1,10 @@
 import 'adaptive_fsrs.dart';
 import 'content_fsrs.dart';
 import 'card_factory.dart';
+import 'markdown_vault.dart';
+import 'smart_adjuster.dart';
+import 'persona_engine.dart';
+import 'daily_insight.dart';
 
 /// 🧠 TikiTaka Brain — 학습기록 → LLM 분석 → 가중치 업그레이드
 ///
@@ -15,6 +19,10 @@ class TikiTakaBrain {
 
   final _fsrs = AdaptiveFSRS();
   final _content = ContentFSRS();
+  final _vault = MarkdownVault();
+  final _adjuster = SmartAdjuster();
+  final _persona = PersonaEngine();
+  final _insight = DailyInsight();
   final _history = <_LogEntry>[];
 
   // ─── Recording ─────────────────────────────────
@@ -23,14 +31,16 @@ class TikiTakaBrain {
     required String subject, required bool known,
     DateTime? time, int? responseMs,
   }) {
+    final now = time ?? DateTime.now();
     _fsrs.record(subject, known, responseMs: responseMs);
+    _vault.record(subject, known, responseMs: responseMs);
+    _adjuster.record(subject:subject, known:known,
+        responseMs:responseMs??800, hourOfDay:now.hour);
+    _persona.record(subject:subject, known:known,
+        hour:now.hour, responseMs:responseMs??800);
     _history.add(_LogEntry(
-      time: time ?? DateTime.now(),
-      subject: subject,
-      known: known,
-      responseMs: responseMs,
+      time: now, subject: subject, known: known, responseMs: responseMs,
     ));
-    // Keep last 1000 entries
     if (_history.length > 1000) _history.removeRange(0, 100);
   }
 
@@ -72,37 +82,16 @@ class TikiTakaBrain {
   // ─── LLM Context Builder ───────────────────────
 
   /// Build a prompt for the LLM to analyze and suggest upgrades
-  String buildLLMContext() {
-    final s = stats;
-    final buf = StringBuffer();
+  String buildLLMContext() => _insight.buildLLMPrompt();
 
-    buf.writeln('## User Learning Profile');
-    buf.writeln('Total cards today: ${s['today']}');
-    buf.writeln();
+  /// Top insight to show the user
+  String get topInsight => _insight.topInsight;
 
-    buf.writeln('| Subject | Accuracy | Interest | Interval | Cards | FSRS |');
-    buf.writeln('|---------|----------|----------|----------|-------|------|');
-    for (final sub in (s['subjects'] as List)) {
-      buf.writeln('| ${sub['subject']} | ${(sub['accuracy']*100).round()}% | '
-          '${sub['interest'].toStringAsFixed(1)} | '
-          '${sub['interval'].toStringAsFixed(1)}x | '
-          '${sub['deckSize']} | ${sub['useFSRS'] ? 'O' : 'X'} |');
-    }
-    buf.writeln();
+  /// User persona
+  String get personaName => _persona.personaName;
 
-    buf.writeln('## Priority: ${(s['priority'] as List).join(' > ')}');
-    buf.writeln();
-
-    buf.writeln('## Analysis Tasks:');
-    buf.writeln('1. Which subjects need more cards?');
-    buf.writeln('2. Which subjects should adjust retention?');
-    buf.writeln('3. Is the user bored or frustrated?');
-    buf.writeln('4. Suggest 3 new content ideas.');
-    buf.writeln();
-    buf.writeln('Respond in JSON: {"adjustments": [{"subject":"","action":"","value":0}], "newCards": [{"subject":"","cards":[]}], "insight": ""}');
-
-    return buf.toString();
-  }
+  /// Generate user-facing insight cards
+  List<String> get userInsights => _insight.generateUserInsights();
 
   // ─── LLM Feedback → Apply ──────────────────────
 
