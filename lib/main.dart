@@ -42,7 +42,7 @@ class _HomeState extends State<Home> {
   String _frontVoice = 'en-us-x-tpf-local'; // male
   String _backVoice = 'en-us-x-tpf-local';  // female
 
-  static const _subjects = ['영어','영어듣기','신조어','수학','상식','유머','뉴스','팔로우'];
+  static const _subjects = ['영어','영어듣기','신조어','수학','상식','유머','뉴스','팔로우','AI상식','건강','사주','별자리'];
   static const _colors = [Color(0xFF2D1B69),Color(0xFF1B3A5C),Color(0xFF3D1A1A),Color(0xFF1A3D2E),Color(0xFF3D2D1A)];
   Color get _color => _colors[_cardNum % _colors.length];
 

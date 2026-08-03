@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'mystic_deck.dart';
 
 /// 📦 Card Factory — 대규모 카드뭉치 생성 + LLM 업데이트
 class CardFactory {
@@ -162,13 +163,10 @@ class CardFactory {
   // ─── 덱 선택 ───────────────────────────────────
 
   static List<String> deckFor(String subject) => switch (subject) {
-    '영어' => english,
-    '신조어' => slang,
-    '유머' => humor,
-    '수학' => math,
-    '영어듣기' => listening,
-    '상식' => facts,
-    '뉴스' => newsMock,
+    '영어' => english, '신조어' => slang, '유머' => humor, '수학' => math,
+    '영어듣기' => listening, '상식' => facts, '뉴스' => newsMock,
+    'AI상식' => MysticDeck.aiTerms, '건강' => MysticDeck.health,
+    '사주' => MysticDeck.saju, '별자리' => MysticDeck.zodiac,
     _ => english,
   };
 
