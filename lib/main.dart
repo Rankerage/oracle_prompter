@@ -13,6 +13,7 @@ import 'services/volume_ox.dart';
 import 'services/hermes_bridge.dart';
 import 'services/mneme.dart';
 import 'services/mystic_deck.dart';
+import 'services/oracle.dart';
 
 void main() => runApp(const TikiTakaApp());
 
@@ -34,6 +35,7 @@ class _HomeState extends State<Home> {
   final _brain = TikiTakaBrain();
   final _hermes = HermesBridge();
   final _mneme = Mneme();
+  final _oracle = Oracle();
   final List<String> _queue = [];
   int _qIdx = 0;
   String _subject = '영어', _mode = 'learn'; // learn | cmd
@@ -47,7 +49,7 @@ class _HomeState extends State<Home> {
   // Buttons
   double _xX = 20, _yX = 0, _xTri = 110, _yTri = 0, _xO = 200, _yO = 0;
 
-  static const _subjects = ['영어','영어듣기','신조어','수학','상식','유머','뉴스','AI상식','건강','사주','별자리'];
+  static const _subjects = ['영어','영어듣기','신조어','수학','상식','유머','뉴스','AI상식','건강','사주','별자리','질문'];
   static const _colors = [Color(0xFF2D1B69),Color(0xFF1B3A5C),Color(0xFF3D1A1A),Color(0xFF1A3D2E),Color(0xFF3D2D1A)];
   Color get _color => _colors[_cardNum % _colors.length];
 
@@ -185,6 +187,19 @@ class _HomeState extends State<Home> {
         _queue.add('오늘의 운세 $today');
         _next();
         break;
+      case '질문':
+        if (_cmdCtrl.text.isNotEmpty) {
+          _queue.clear(); _qIdx = 0;
+          _queue.add('${_cmdCtrl.text} 잠시만 기다려주세요...');
+          _next();
+          _oracle.ask(_cmdCtrl.text).then((card) {
+            _queue.clear(); _qIdx = 0;
+            _queue.add('${card['front']} ${card['back']}');
+            _next();
+            if (mounted) setState((){});
+          });
+        }
+        break;
       default:
         _load('영어');
     }
@@ -233,7 +248,7 @@ class _HomeState extends State<Home> {
     // Step 1: Engine selection — multi-choice
     if (_cmdStep == 'engine' && _cmdEngine.isEmpty) {
       return _cardFull('원하는 서비스', '',
-        chips: _subjects.sublist(0,8) + ['건강문진', '운세', '메모'],
+        chips: _subjects.sublist(0,8) + ['건강문진', '운세', '메모', '질문'],
         onSelect: _selectEngine);
     }
 
@@ -248,11 +263,11 @@ class _HomeState extends State<Home> {
     }
 
     // Step 3: Text input (only when needed)
-    if (_cmdStep == 'confirm' && _cmdEngine == '메모') {
+    if (_cmdStep == 'confirm' && (_cmdEngine == '메모' || _cmdEngine == '질문')) {
       return Container(margin:EdgeInsets.symmetric(horizontal:16),padding:EdgeInsets.all(24),
         decoration:_cardDeco(Color(0xFF1A1A1A),Color(0xFFD4A574).withAlpha(50)),
         child:Column(mainAxisSize:MainAxisSize.min,children:[
-          Text('기억할 내용',style:TextStyle(color:Color(0xFFD4A574),fontSize:18,fontWeight:FontWeight.w600)),
+          Text('${_cmdEngine == '질문' ? '무엇이든 물어보세요' : '기억할 내용'}',style:TextStyle(color:Color(0xFFD4A574),fontSize:18,fontWeight:FontWeight.w600)),
           SizedBox(height:16),
           TextField(controller:_cmdCtrl,autofocus:true,style:TextStyle(color:Colors.white),
             decoration:InputDecoration(hintText:'입력 후 ○...',hintStyle:TextStyle(color:Colors.white24),
